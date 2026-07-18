@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, LayoutDashboard, Receipt, Tags } from "lucide-react";
+import { Users, LayoutDashboard, LayoutGrid, Receipt, Tags } from "lucide-react";
 import { logoutAction } from "@/modules/auth/application/auth.actions";
 import { Button } from "@/components/ui/button";
 
@@ -24,6 +24,13 @@ export function Sidebar({
         >
           <Users className="size-4" />
           Clientes
+        </Link>
+        <Link
+          href="/patio"
+          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-white/10"
+        >
+          <LayoutGrid className="size-4" />
+          Pátio
         </Link>
 
         <p className="mt-4 mb-1 px-3 text-xs font-medium tracking-wide text-sidebar-foreground/50 uppercase">

@@ -18,6 +18,7 @@ export type FormaPagamento =
   | "cartao_debito"
   | "pix"
   | "boleto";
+export type StatusOS = "aguardando" | "em_execucao" | "parado" | "concluido" | "cancelada";
 
 export interface Database {
   public: {
@@ -229,6 +230,7 @@ export interface Database {
           data_emissao: string;
           status: StatusFinanceiro;
           observacoes: string | null;
+          ordem_servico_id: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -246,6 +248,7 @@ export interface Database {
           data_emissao?: string;
           status?: StatusFinanceiro;
           observacoes?: string | null;
+          ordem_servico_id?: string | null;
           created_by?: string | null;
         };
         Update: Partial<
@@ -266,6 +269,13 @@ export interface Database {
             columns: ["categoria_id"];
             isOneToOne: false;
             referencedRelation: "categoria_financeira";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "conta_financeira_ordem_servico_id_fkey";
+            columns: ["ordem_servico_id"];
+            isOneToOne: false;
+            referencedRelation: "ordem_servico";
             referencedColumns: ["id"];
           },
         ];
@@ -344,6 +354,64 @@ export interface Database {
           },
         ];
       };
+      ordem_servico: {
+        Row: {
+          id: string;
+          workshop_id: string;
+          numero: number;
+          cliente_id: string;
+          veiculo_id: string;
+          queixa: string;
+          descricao: string | null;
+          tecnico: string | null;
+          status: StatusOS;
+          galpao: number | null;
+          data_abertura: string;
+          data_inicio: string | null;
+          data_pausa: string | null;
+          data_conclusao: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          workshop_id: string;
+          cliente_id: string;
+          veiculo_id: string;
+          queixa: string;
+          descricao?: string | null;
+          tecnico?: string | null;
+          status?: StatusOS;
+          galpao?: number | null;
+          created_by?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["ordem_servico"]["Insert"] & {
+            data_inicio: string | null;
+            data_pausa: string | null;
+            data_conclusao: string | null;
+            deleted_at: string | null;
+          }
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "ordem_servico_cliente_id_fkey";
+            columns: ["cliente_id"];
+            isOneToOne: false;
+            referencedRelation: "cliente";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ordem_servico_veiculo_id_fkey";
+            columns: ["veiculo_id"];
+            isOneToOne: false;
+            referencedRelation: "veiculo";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       vw_inadimplencia: {
@@ -382,6 +450,7 @@ export interface Database {
           p_observacoes: string | null;
           p_created_by: string;
           p_parcelas: { numero: number; valor: number; vencimento: string }[];
+          p_ordem_servico_id?: string | null;
         };
         Returns: string;
       };
@@ -414,6 +483,15 @@ export interface Database {
           pago_periodo: number;
           total_inadimplente: number;
         }[];
+      };
+      concluir_ordem_servico: {
+        Args: {
+          p_ordem_id: string;
+          p_itens: { categoria_id: string; valor: number }[] | null;
+          p_vencimento: string | null;
+          p_created_by: string;
+        };
+        Returns: string[];
       };
     };
   };
