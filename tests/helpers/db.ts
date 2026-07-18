@@ -1,22 +1,29 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PGlite, type Transaction } from "@electric-sql/pglite";
 import { unaccent } from "@electric-sql/pglite/contrib/unaccent";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+const migrationsDir = path.join(here, "../../supabase/migrations");
 
 export type Db = PGlite;
 
 export async function createTestDb(): Promise<PGlite> {
   const db = await PGlite.create({ extensions: { unaccent } });
   const shim = readFileSync(path.join(here, "supabase-shim.sql"), "utf-8");
-  const migration = readFileSync(
-    path.join(here, "../../supabase/migrations/0001_init.sql"),
-    "utf-8"
-  );
   await db.exec(shim);
-  await db.exec(migration);
+
+  // Aplica todas as migrações em ordem (0001_..., 0002_..., ...) — mesma
+  // sequência que rodaria contra o Supabase real.
+  const arquivos = readdirSync(migrationsDir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort();
+  for (const arquivo of arquivos) {
+    const migration = readFileSync(path.join(migrationsDir, arquivo), "utf-8");
+    await db.exec(migration);
+  }
+
   return db;
 }
 

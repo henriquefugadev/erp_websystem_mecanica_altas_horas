@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users } from "lucide-react";
+import { Users, LayoutDashboard, Receipt, Tags } from "lucide-react";
 import { logoutAction } from "@/modules/auth/application/auth.actions";
 import { Button } from "@/components/ui/button";
 
@@ -24,6 +24,31 @@ export function Sidebar({
         >
           <Users className="size-4" />
           Clientes
+        </Link>
+
+        <p className="mt-4 mb-1 px-3 text-xs font-medium tracking-wide text-sidebar-foreground/50 uppercase">
+          Financeiro
+        </p>
+        <Link
+          href="/financeiro"
+          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-white/10"
+        >
+          <LayoutDashboard className="size-4" />
+          Dashboard
+        </Link>
+        <Link
+          href="/financeiro/contas"
+          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-white/10"
+        >
+          <Receipt className="size-4" />
+          Contas
+        </Link>
+        <Link
+          href="/financeiro/categorias"
+          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-white/10"
+        >
+          <Tags className="size-4" />
+          Categorias
         </Link>
       </nav>
 

@@ -12,6 +12,12 @@
   --color-action-foreground: #16161a;
   --color-alert: #d62828;
   --color-alert-foreground: #ffffff;
+  /* Paleta categórica validada (dataviz skill) para o dashboard financeiro:
+     entrada/saída são identidade (categórica), não status — o vermelho de
+     alerta fica reservado só para inadimplência/vencido, como no resto do
+     app. Verde é invariante entre os modos; azul reesteia para o modo escuro. */
+  --color-fin-entrada: #008300;
+  --color-fin-saida: #2a78d6;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -55,6 +61,8 @@
   --color-action-foreground: var(--color-action-foreground);
   --color-alert: var(--color-alert);
   --color-alert-foreground: var(--color-alert-foreground);
+  --color-fin-entrada: var(--color-fin-entrada);
+  --color-fin-saida: var(--color-fin-saida);
   --font-sans: var(--font-inter);
   --font-heading: var(--font-oswald);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -156,6 +164,8 @@
   --sidebar-border: oklch(1 0 0 / 10%);
 
   --sidebar-ring: oklch(0.556 0 0);
+
+  --color-fin-saida: #3987e5;
 }
 
 @layer base {
