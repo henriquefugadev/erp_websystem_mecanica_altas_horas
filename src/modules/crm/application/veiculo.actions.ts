@@ -80,7 +80,7 @@ export async function excluirVeiculoAction(
 
 function mensagemDeErro(e: unknown): string {
   if (e && typeof e === "object" && "code" in e && e.code === "23505") {
-    return "Já existe um veículo com essa placa ou chassi nesta oficina.";
+    return "Já existe um veículo com essa placa nesta oficina.";
   }
   return "Não foi possível salvar. Tente novamente.";
 }

@@ -100,6 +100,8 @@ export function NovoClienteForm() {
             register={clienteForm.register}
             errors={clienteForm.formState.errors}
             control={clienteForm.control}
+            setValue={clienteForm.setValue}
+            getValues={clienteForm.getValues}
           />
         </CardContent>
       </Card>

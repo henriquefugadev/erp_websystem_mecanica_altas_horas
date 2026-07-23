@@ -8,12 +8,8 @@ export const veiculoDefaultValues: VeiculoFormValues = {
   placa: "",
   marca: "",
   modelo: "",
-  versao: "",
   ano: "",
-  combustivel: "",
   cor: "",
-  chassi: "",
-  renavam: "",
   quilometragem: "",
   notas: "",
 };

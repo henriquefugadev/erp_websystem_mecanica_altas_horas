@@ -49,6 +49,8 @@ export function EditarClienteForm({
             register={form.register}
             errors={form.formState.errors}
             control={form.control}
+            setValue={form.setValue}
+            getValues={form.getValues}
           />
         </CardContent>
       </Card>

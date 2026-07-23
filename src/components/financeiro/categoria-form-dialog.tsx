@@ -131,7 +131,7 @@ export function CategoriaFormDialog({
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="nome">Nome</Label>
+            <Label htmlFor="nome" required>Nome</Label>
             <Input id="nome" {...form.register("nome")} />
             {form.formState.errors.nome && (
               <p className="text-sm text-destructive">{form.formState.errors.nome.message}</p>

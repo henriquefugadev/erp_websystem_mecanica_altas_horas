@@ -1,27 +1,26 @@
 import { createClient } from "@/lib/supabase/server";
 import { listarOrdensDoQuadro } from "@/modules/patio/data/ordem-servico.repository";
 import { listarCategorias } from "@/modules/financeiro/data/categoria.repository";
+import { listarFuncionarios } from "@/modules/funcionarios/data/funcionario.repository";
+import { listarPecas } from "@/modules/estoque/data/peca.repository";
 import { KanbanBoard } from "./kanban-board";
 
 export default async function PatioPage() {
   const supabase = await createClient();
 
-  const [ordens, categoriasReceita, clientesResultado] = await Promise.all([
+  const [ordens, categoriasReceita, funcionarios, pecas] = await Promise.all([
     listarOrdensDoQuadro(supabase),
     listarCategorias(supabase, "receita"),
-    supabase
-      .from("cliente")
-      .select("id, nome, veiculo(id, placa, modelo, marca)")
-      .is("deleted_at", null)
-      .filter("veiculo.deleted_at", "is", null)
-      .order("nome"),
+    listarFuncionarios(supabase, true),
+    listarPecas(supabase, true),
   ]);
 
   return (
     <KanbanBoard
       ordens={ordens}
-      clientes={clientesResultado.data ?? []}
       categoriasReceita={categoriasReceita}
+      funcionarios={funcionarios}
+      pecas={pecas}
     />
   );
 }

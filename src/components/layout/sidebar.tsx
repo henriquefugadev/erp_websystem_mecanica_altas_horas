@@ -1,66 +1,93 @@
+"use client";
+
 import Link from "next/link";
-import { Users, LayoutDashboard, LayoutGrid, Receipt, Tags } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useMemo } from "react";
 import { logoutAction } from "@/modules/auth/application/auth.actions";
+import type { Papel } from "@/lib/supabase/database.types";
 import { Button } from "@/components/ui/button";
+import {
+  Sidebar as SidebarPrimitive,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { NAV_GROUPS } from "./nav-items";
+
+function useActiveHref(pathname: string) {
+  return useMemo(() => {
+    const hrefs = NAV_GROUPS.flatMap((grupo) => grupo.items.map((item) => item.href));
+    const candidatos = hrefs.filter(
+      (href) => pathname === href || pathname.startsWith(`${href}/`)
+    );
+    // Rota mais específica (href mais longo) vence — evita destacar "Dashboard"
+    // (/financeiro) junto de "Contas" (/financeiro/contas) ao mesmo tempo.
+    return candidatos.sort((a, b) => b.length - a.length)[0];
+  }, [pathname]);
+}
 
 export function Sidebar({
   nomeUsuario,
   nomeOficina,
+  papel,
 }: {
   nomeUsuario: string;
   nomeOficina: string;
+  papel: Papel;
 }) {
+  const pathname = usePathname();
+  const activeHref = useActiveHref(pathname);
+
+  const grupos = NAV_GROUPS.map((grupo) => ({
+    ...grupo,
+    items: grupo.items.filter((item) => !item.adminOnly || papel === "admin"),
+  })).filter((grupo) => grupo.items.length > 0);
+
   return (
-    <aside className="flex w-60 shrink-0 flex-col bg-sidebar text-sidebar-foreground">
-      <div className="border-b border-white/10 p-4">
-        <p className="font-heading text-lg leading-tight">Altas Horas</p>
-        <p className="text-xs text-sidebar-foreground/60">{nomeOficina}</p>
-      </div>
+    <SidebarPrimitive collapsible="icon">
+      <SidebarHeader className="border-b border-sidebar-border">
+        <div className="flex items-center justify-between gap-2 px-1 py-1 group-data-[collapsible=icon]:justify-center">
+          <div className="min-w-0 group-data-[collapsible=icon]:hidden">
+            <p className="truncate font-heading text-lg leading-tight">Altas Horas</p>
+            <p className="truncate text-xs text-sidebar-foreground/60">{nomeOficina}</p>
+          </div>
+          <SidebarTrigger />
+        </div>
+      </SidebarHeader>
 
-      <nav className="flex-1 p-2">
-        <Link
-          href="/clientes"
-          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-white/10"
-        >
-          <Users className="size-4" />
-          Clientes
-        </Link>
-        <Link
-          href="/patio"
-          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-white/10"
-        >
-          <LayoutGrid className="size-4" />
-          Pátio
-        </Link>
+      <SidebarContent>
+        {grupos.map((grupo, i) => (
+          <SidebarGroup key={grupo.label ?? i}>
+            {grupo.label && <SidebarGroupLabel>{grupo.label}</SidebarGroupLabel>}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {grupo.items.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      isActive={item.href === activeHref}
+                      tooltip={item.label}
+                      render={<Link href={item.href} />}
+                    >
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
 
-        <p className="mt-4 mb-1 px-3 text-xs font-medium tracking-wide text-sidebar-foreground/50 uppercase">
-          Financeiro
-        </p>
-        <Link
-          href="/financeiro"
-          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-white/10"
-        >
-          <LayoutDashboard className="size-4" />
-          Dashboard
-        </Link>
-        <Link
-          href="/financeiro/contas"
-          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-white/10"
-        >
-          <Receipt className="size-4" />
-          Contas
-        </Link>
-        <Link
-          href="/financeiro/categorias"
-          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-white/10"
-        >
-          <Tags className="size-4" />
-          Categorias
-        </Link>
-      </nav>
-
-      <div className="border-t border-white/10 p-3">
-        <p className="mb-2 truncate text-xs text-sidebar-foreground/60">
+      <SidebarFooter className="border-t border-sidebar-border">
+        <p className="truncate px-2 text-xs text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">
           {nomeUsuario}
         </p>
         <form action={logoutAction}>
@@ -68,12 +95,12 @@ export function Sidebar({
             type="submit"
             variant="ghost"
             size="sm"
-            className="w-full text-sidebar-foreground hover:bg-white/10 hover:text-sidebar-foreground"
+            className="w-full justify-center text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-0"
           >
             Sair
           </Button>
         </form>
-      </div>
-    </aside>
+      </SidebarFooter>
+    </SidebarPrimitive>
   );
 }

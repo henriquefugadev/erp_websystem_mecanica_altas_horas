@@ -69,8 +69,15 @@ export default async function ClienteDetalhePage({
               cliente.complemento ? ` - ${cliente.complemento}` : ""
             }`}
           />
-          <Campo rotulo="Bairro" valor={cliente.bairro} />
-          <Campo rotulo="Cidade/UF" valor={`${cliente.cidade}/${cliente.estado}`} />
+          <Campo rotulo="Bairro" valor={cliente.bairro ?? "—"} />
+          <Campo
+            rotulo="Cidade/UF"
+            valor={
+              cliente.cidade || cliente.estado
+                ? `${cliente.cidade ?? "—"}/${cliente.estado ?? "—"}`
+                : "—"
+            }
+          />
           <Campo rotulo="CEP" valor={formatarCEP(cliente.cep)} />
         </CardContent>
       </Card>
@@ -101,7 +108,7 @@ export default async function ClienteDetalhePage({
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="font-heading text-lg">
-                {veiculo.modelo} {veiculo.versao ? `(${veiculo.versao})` : ""}
+                {veiculo.modelo}
               </CardTitle>
               <Badge variant="outline" className="mt-1">
                 {formatarPlaca(veiculo.placa)}
@@ -113,12 +120,10 @@ export default async function ClienteDetalhePage({
               <Campo rotulo="Marca" valor={veiculo.marca ?? "—"} />
               <Campo rotulo="Ano" valor={veiculo.ano?.toString() ?? "—"} />
               <Campo rotulo="Cor" valor={veiculo.cor ?? "—"} />
-              <Campo rotulo="Combustível" valor={veiculo.combustivel ?? "—"} />
               <Campo
                 rotulo="Km"
                 valor={veiculo.quilometragem?.toLocaleString("pt-BR") ?? "—"}
               />
-              <Campo rotulo="Chassi" valor={veiculo.chassi ?? "—"} />
             </div>
             <VeiculoFotos
               clienteId={cliente.id}

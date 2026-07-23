@@ -7,12 +7,61 @@ import { clienteSchema, type ClienteInput } from "@/lib/validators/cliente.schem
 import {
   atualizarCliente,
   criarCliente,
+  listarClientes,
   softDeleteCliente,
 } from "@/modules/crm/data/cliente.repository";
 
 export type ActionResult<T> =
   | { ok: true; data: T }
   | { ok: false; erro: string };
+
+export interface VeiculoOpcaoBusca {
+  id: string;
+  placa: string;
+  modelo: string;
+  marca: string | null;
+}
+
+export interface ClienteOpcaoBusca {
+  id: string;
+  nome: string;
+  veiculo: VeiculoOpcaoBusca[];
+}
+
+const LIMITE_RESULTADOS_BUSCA = 20;
+
+// Alimenta o combobox de cliente (ex.: Nova OS, orçamento) sob demanda, em vez
+// de carregar todos os clientes+veículos de uma vez — busca tolerante a
+// acento via buscar_clientes() (0001_init.sql) e busca os veículos só dos
+// clientes encontrados.
+export async function buscarClientesComVeiculosAction(
+  termo: string
+): Promise<ClienteOpcaoBusca[]> {
+  const supabase = await createClient();
+  const clientes = await listarClientes(supabase, termo);
+  const encontrados = clientes.slice(0, LIMITE_RESULTADOS_BUSCA);
+
+  if (encontrados.length === 0) return [];
+
+  const { data: veiculos, error } = await supabase
+    .from("veiculo")
+    .select("id, placa, modelo, marca, cliente_id")
+    .in(
+      "cliente_id",
+      encontrados.map((c) => c.id)
+    )
+    .is("deleted_at", null);
+
+  if (error) throw error;
+
+  return encontrados.map((c) => ({
+    id: c.id,
+    nome: c.nome,
+    veiculo: (veiculos ?? [])
+      .filter((v) => v.cliente_id === c.id)
+      .map((v) => ({ id: v.id, placa: v.placa, modelo: v.modelo, marca: v.marca })),
+  }));
+}
 
 export async function criarClienteAction(
   entrada: unknown

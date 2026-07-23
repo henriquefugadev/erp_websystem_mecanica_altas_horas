@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Building2, Clock, User } from "lucide-react";
+import { ArrowLeft, Building2, Clock, User, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,11 +14,13 @@ import { formatarPlaca } from "@/lib/format";
 import { GALPOES, type Galpao, type OrdemComRelacoes } from "@/modules/patio/domain/types";
 import { statusPagamento, type NivelAtencao } from "@/modules/patio/domain/status";
 import { ConcluirOsDialog } from "./concluir-os-dialog";
+import { UsarPecaDialog, type PecaOpcao } from "./usar-peca-dialog";
 
 export function OsCard({
   ordem,
   nivel,
   categoriasReceita,
+  pecas,
   onIniciar,
   onVoltar,
   onPausar,
@@ -29,6 +31,7 @@ export function OsCard({
   ordem: OrdemComRelacoes;
   nivel: NivelAtencao;
   categoriasReceita: { id: string; nome: string }[];
+  pecas: PecaOpcao[];
   onIniciar: () => void;
   onVoltar: () => void;
   onPausar: () => void;
@@ -66,6 +69,13 @@ export function OsCard({
         <User className="size-3" />
         {ordem.cliente?.nome ?? "—"}
       </p>
+
+      {ordem.funcionario && (
+        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Wrench className="size-3" />
+          {ordem.funcionario.nome}
+        </p>
+      )}
 
       <p className="line-clamp-2 text-xs">{ordem.queixa}</p>
 
@@ -137,6 +147,7 @@ export function OsCard({
             <Button size="sm" variant="outline" onClick={onPausar}>
               Pausar
             </Button>
+            <UsarPecaDialog ordemId={ordem.id} pecas={pecas} />
             <ConcluirOsDialog
               ordemId={ordem.id}
               numero={ordem.numero}
@@ -153,6 +164,7 @@ export function OsCard({
             >
               Retomar
             </Button>
+            <UsarPecaDialog ordemId={ordem.id} pecas={pecas} />
             <Button size="sm" variant="ghost" onClick={onCancelar}>
               Cancelar
             </Button>

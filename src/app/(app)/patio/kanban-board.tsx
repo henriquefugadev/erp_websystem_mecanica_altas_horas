@@ -23,18 +23,21 @@ import {
 } from "@/modules/patio/domain/types";
 import type { StatusOS } from "@/lib/supabase/database.types";
 import { OsCard } from "./os-card";
-import { NovaOsDialog, type ClienteComVeiculos } from "./nova-os-dialog";
+import { NovaOsDialog, type FuncionarioOpcao } from "./nova-os-dialog";
+import type { PecaOpcao } from "./usar-peca-dialog";
 
 const COLUNAS: StatusOS[] = ["aguardando", "em_execucao", "parado", "concluido"];
 
 export function KanbanBoard({
   ordens,
-  clientes,
   categoriasReceita,
+  funcionarios,
+  pecas,
 }: {
   ordens: OrdemComRelacoes[];
-  clientes: ClienteComVeiculos[];
   categoriasReceita: { id: string; nome: string }[];
+  funcionarios: FuncionarioOpcao[];
+  pecas: PecaOpcao[];
 }) {
   const router = useRouter();
 
@@ -146,7 +149,7 @@ export function KanbanBoard({
     <div className="grid gap-4">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-2xl">Pátio</h1>
-        <NovaOsDialog clientes={clientes} />
+        <NovaOsDialog funcionarios={funcionarios} />
       </div>
 
       <div className="flex flex-wrap gap-2 text-xs">
@@ -199,6 +202,7 @@ export function KanbanBoard({
                       agora
                     )}
                     categoriasReceita={categoriasReceita}
+                    pecas={pecas}
                     onIniciar={() => void iniciar(ordem.id)}
                     onVoltar={() => void voltar(ordem.id)}
                     onPausar={() => void pausar(ordem.id)}

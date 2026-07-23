@@ -19,6 +19,22 @@ export type FormaPagamento =
   | "pix"
   | "boleto";
 export type StatusOS = "aguardando" | "em_execucao" | "parado" | "concluido" | "cancelada";
+export type StatusPedidoCompra = "aberto" | "parcial" | "recebido" | "cancelado";
+export type TipoMovimentacaoEstoque =
+  | "entrada"
+  | "saida_consumo"
+  | "devolucao"
+  | "perda"
+  | "ajuste";
+export type StatusOrcamento =
+  | "rascunho"
+  | "enviado"
+  | "aprovado"
+  | "aprovado_parcial"
+  | "recusado"
+  | "cancelado";
+export type StatusOrcamentoEfetivo = StatusOrcamento | "expirado";
+export type TipoItemOrcamento = "peca" | "servico";
 
 export interface Database {
   public: {
@@ -28,6 +44,20 @@ export interface Database {
           id: string;
           nome: string;
           fuso_horario: string;
+          razao_social: string | null;
+          cnpj: string | null;
+          telefone: string | null;
+          email: string | null;
+          cep: string | null;
+          logradouro: string | null;
+          numero: string | null;
+          complemento: string | null;
+          bairro: string | null;
+          cidade: string | null;
+          estado: string | null;
+          condicoes_pagamento_padrao: string | null;
+          validade_orcamento_dias: number;
+          logo_path: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -35,6 +65,20 @@ export interface Database {
           id?: string;
           nome: string;
           fuso_horario?: string;
+          razao_social?: string | null;
+          cnpj?: string | null;
+          telefone?: string | null;
+          email?: string | null;
+          cep?: string | null;
+          logradouro?: string | null;
+          numero?: string | null;
+          complemento?: string | null;
+          bairro?: string | null;
+          cidade?: string | null;
+          estado?: string | null;
+          condicoes_pagamento_padrao?: string | null;
+          validade_orcamento_dias?: number;
+          logo_path?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["workshop"]["Insert"]>;
         Relationships: [];
@@ -85,9 +129,9 @@ export interface Database {
           logradouro: string;
           numero: string;
           complemento: string | null;
-          bairro: string;
-          cidade: string;
-          estado: string;
+          bairro: string | null;
+          cidade: string | null;
+          estado: string | null;
           origem: string | null;
           notas: string | null;
           consente_email: boolean;
@@ -109,9 +153,9 @@ export interface Database {
           logradouro: string;
           numero: string;
           complemento?: string | null;
-          bairro: string;
-          cidade: string;
-          estado: string;
+          bairro?: string | null;
+          cidade?: string | null;
+          estado?: string | null;
           origem?: string | null;
           notas?: string | null;
           consente_email?: boolean;
@@ -231,6 +275,7 @@ export interface Database {
           status: StatusFinanceiro;
           observacoes: string | null;
           ordem_servico_id: string | null;
+          fornecedor_id: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -249,6 +294,7 @@ export interface Database {
           status?: StatusFinanceiro;
           observacoes?: string | null;
           ordem_servico_id?: string | null;
+          fornecedor_id?: string | null;
           created_by?: string | null;
         };
         Update: Partial<
@@ -276,6 +322,13 @@ export interface Database {
             columns: ["ordem_servico_id"];
             isOneToOne: false;
             referencedRelation: "ordem_servico";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "conta_financeira_fornecedor_id_fkey";
+            columns: ["fornecedor_id"];
+            isOneToOne: false;
+            referencedRelation: "fornecedor";
             referencedColumns: ["id"];
           },
         ];
@@ -363,9 +416,10 @@ export interface Database {
           veiculo_id: string;
           queixa: string;
           descricao: string | null;
-          tecnico: string | null;
+          funcionario_id: string | null;
           status: StatusOS;
           galpao: number | null;
+          orcamento_id: string | null;
           data_abertura: string;
           data_inicio: string | null;
           data_pausa: string | null;
@@ -382,9 +436,10 @@ export interface Database {
           veiculo_id: string;
           queixa: string;
           descricao?: string | null;
-          tecnico?: string | null;
+          funcionario_id?: string | null;
           status?: StatusOS;
           galpao?: number | null;
+          orcamento_id?: string | null;
           created_by?: string | null;
         };
         Update: Partial<
@@ -410,6 +465,433 @@ export interface Database {
             referencedRelation: "veiculo";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "ordem_servico_funcionario_id_fkey";
+            columns: ["funcionario_id"];
+            isOneToOne: false;
+            referencedRelation: "funcionario";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      orcamento: {
+        Row: {
+          id: string;
+          workshop_id: string;
+          numero: number;
+          cliente_id: string;
+          veiculo_id: string;
+          queixa: string;
+          observacoes: string | null;
+          condicoes_pagamento: string | null;
+          status: StatusOrcamento;
+          valor_total: number;
+          data_emissao: string;
+          validade: string;
+          enviado_em: string | null;
+          respondido_em: string | null;
+          ordem_servico_id: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          workshop_id: string;
+          cliente_id: string;
+          veiculo_id: string;
+          queixa: string;
+          observacoes?: string | null;
+          condicoes_pagamento?: string | null;
+          status?: StatusOrcamento;
+          valor_total?: number;
+          validade: string;
+          created_by?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["orcamento"]["Insert"] & {
+            enviado_em: string | null;
+            respondido_em: string | null;
+            ordem_servico_id: string | null;
+            deleted_at: string | null;
+          }
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "orcamento_cliente_id_fkey";
+            columns: ["cliente_id"];
+            isOneToOne: false;
+            referencedRelation: "cliente";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orcamento_veiculo_id_fkey";
+            columns: ["veiculo_id"];
+            isOneToOne: false;
+            referencedRelation: "veiculo";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      orcamento_item: {
+        Row: {
+          id: string;
+          workshop_id: string;
+          orcamento_id: string;
+          peca_id: string | null;
+          tipo: TipoItemOrcamento;
+          descricao: string;
+          quantidade: number;
+          preco_unitario: number;
+          desconto: number;
+          aprovado: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workshop_id: string;
+          orcamento_id: string;
+          peca_id?: string | null;
+          tipo: TipoItemOrcamento;
+          descricao: string;
+          quantidade?: number;
+          preco_unitario: number;
+          desconto?: number;
+          aprovado?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["orcamento_item"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "orcamento_item_orcamento_id_fkey";
+            columns: ["orcamento_id"];
+            isOneToOne: false;
+            referencedRelation: "orcamento";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      fornecedor: {
+        Row: {
+          id: string;
+          workshop_id: string;
+          nome: string;
+          documento: string | null;
+          telefone: string | null;
+          email: string | null;
+          contato_nome: string | null;
+          condicoes_pagamento: string | null;
+          prazo_entrega_dias: number | null;
+          observacoes: string | null;
+          ativo: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          workshop_id: string;
+          nome: string;
+          documento?: string | null;
+          telefone?: string | null;
+          email?: string | null;
+          contato_nome?: string | null;
+          condicoes_pagamento?: string | null;
+          prazo_entrega_dias?: number | null;
+          observacoes?: string | null;
+          ativo?: boolean;
+          created_by?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["fornecedor"]["Insert"] & {
+            deleted_at: string | null;
+          }
+        >;
+        Relationships: [];
+      };
+      funcionario: {
+        Row: {
+          id: string;
+          workshop_id: string;
+          nome: string;
+          funcao: string | null;
+          telefone: string | null;
+          email: string | null;
+          ativo: boolean;
+          observacoes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          workshop_id: string;
+          nome: string;
+          funcao?: string | null;
+          telefone?: string | null;
+          email?: string | null;
+          ativo?: boolean;
+          observacoes?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["funcionario"]["Insert"] & {
+            deleted_at: string | null;
+          }
+        >;
+        Relationships: [];
+      };
+      pedido_compra: {
+        Row: {
+          id: string;
+          workshop_id: string;
+          numero: number;
+          fornecedor_id: string;
+          categoria_id: string;
+          status: StatusPedidoCompra;
+          data_emissao: string;
+          previsao_entrega: string | null;
+          observacoes: string | null;
+          ordem_servico_id: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          workshop_id: string;
+          fornecedor_id: string;
+          categoria_id: string;
+          status?: StatusPedidoCompra;
+          data_emissao?: string;
+          previsao_entrega?: string | null;
+          observacoes?: string | null;
+          ordem_servico_id?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["pedido_compra"]["Insert"] & {
+            deleted_at: string | null;
+          }
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "pedido_compra_fornecedor_id_fkey";
+            columns: ["fornecedor_id"];
+            isOneToOne: false;
+            referencedRelation: "fornecedor";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pedido_compra_categoria_id_fkey";
+            columns: ["categoria_id"];
+            isOneToOne: false;
+            referencedRelation: "categoria_financeira";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pedido_compra_ordem_servico_id_fkey";
+            columns: ["ordem_servico_id"];
+            isOneToOne: false;
+            referencedRelation: "ordem_servico";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      pedido_compra_item: {
+        Row: {
+          id: string;
+          workshop_id: string;
+          pedido_id: string;
+          descricao: string;
+          quantidade: number;
+          preco_unitario: number;
+          quantidade_recebida: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workshop_id: string;
+          pedido_id: string;
+          descricao: string;
+          quantidade: number;
+          preco_unitario: number;
+          quantidade_recebida?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["pedido_compra_item"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "pedido_compra_item_pedido_id_fkey";
+            columns: ["pedido_id"];
+            isOneToOne: false;
+            referencedRelation: "pedido_compra";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      recebimento_compra: {
+        Row: {
+          id: string;
+          workshop_id: string;
+          pedido_id: string;
+          data_recebimento: string;
+          observacoes: string | null;
+          conta_id: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          workshop_id: string;
+          pedido_id: string;
+          data_recebimento?: string;
+          observacoes?: string | null;
+          conta_id?: string | null;
+          created_by?: string | null;
+        };
+        Update: never; // recebimento é imutável, histórico de conferência
+        Relationships: [
+          {
+            foreignKeyName: "recebimento_compra_pedido_id_fkey";
+            columns: ["pedido_id"];
+            isOneToOne: false;
+            referencedRelation: "pedido_compra";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "recebimento_compra_conta_id_fkey";
+            columns: ["conta_id"];
+            isOneToOne: false;
+            referencedRelation: "conta_financeira";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      recebimento_item: {
+        Row: {
+          id: string;
+          workshop_id: string;
+          recebimento_id: string;
+          pedido_item_id: string;
+          quantidade_recebida: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          workshop_id: string;
+          recebimento_id: string;
+          pedido_item_id: string;
+          quantidade_recebida: number;
+        };
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "recebimento_item_recebimento_id_fkey";
+            columns: ["recebimento_id"];
+            isOneToOne: false;
+            referencedRelation: "recebimento_compra";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "recebimento_item_pedido_item_id_fkey";
+            columns: ["pedido_item_id"];
+            isOneToOne: false;
+            referencedRelation: "pedido_compra_item";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      peca: {
+        Row: {
+          id: string;
+          workshop_id: string;
+          sku: string | null;
+          nome: string;
+          fabricante: string | null;
+          aplicacao: string | null;
+          unidade: string;
+          localizacao: string | null;
+          preco_venda: number;
+          custo_medio: number;
+          estoque_minimo: number;
+          estoque_atual: number;
+          ativo: boolean;
+          observacoes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          workshop_id: string;
+          sku?: string | null;
+          nome: string;
+          fabricante?: string | null;
+          aplicacao?: string | null;
+          unidade?: string;
+          localizacao?: string | null;
+          preco_venda?: number;
+          estoque_minimo?: number;
+          ativo?: boolean;
+          observacoes?: string | null;
+          created_by?: string | null;
+        };
+        // custo_medio e estoque_atual são derivados do ledger (trigger
+        // app.aplicar_movimento_estoque) — a aplicação nunca os grava direto,
+        // então ficam fora do Insert/Update expostos ao client.
+        Update: Partial<
+          Database["public"]["Tables"]["peca"]["Insert"] & {
+            deleted_at: string | null;
+          }
+        >;
+        Relationships: [];
+      };
+      movimentacao_estoque: {
+        Row: {
+          id: string;
+          workshop_id: string;
+          peca_id: string;
+          tipo: TipoMovimentacaoEstoque;
+          quantidade: number;
+          custo_unitario: number | null;
+          ordem_servico_id: string | null;
+          observacao: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          workshop_id: string;
+          peca_id: string;
+          tipo: TipoMovimentacaoEstoque;
+          quantidade: number;
+          custo_unitario?: number | null;
+          ordem_servico_id?: string | null;
+          observacao?: string | null;
+          created_by?: string | null;
+        };
+        Update: never; // ledger imutável — só INSERT, nunca UPDATE/DELETE
+        Relationships: [
+          {
+            foreignKeyName: "movimentacao_estoque_peca_id_fkey";
+            columns: ["peca_id"];
+            isOneToOne: false;
+            referencedRelation: "peca";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "movimentacao_estoque_ordem_servico_id_fkey";
+            columns: ["ordem_servico_id"];
+            isOneToOne: false;
+            referencedRelation: "ordem_servico";
+            referencedColumns: ["id"];
+          },
         ];
       };
     };
@@ -428,6 +910,31 @@ export interface Database {
           vencimento: string;
           saldo: number;
           dias_atraso: number;
+        };
+        Relationships: [];
+      };
+      vw_orcamento: {
+        Row: {
+          id: string;
+          workshop_id: string;
+          numero: number;
+          cliente_id: string;
+          veiculo_id: string;
+          queixa: string;
+          observacoes: string | null;
+          condicoes_pagamento: string | null;
+          status: StatusOrcamento;
+          valor_total: number;
+          data_emissao: string;
+          validade: string;
+          enviado_em: string | null;
+          respondido_em: string | null;
+          ordem_servico_id: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+          status_efetivo: StatusOrcamentoEfetivo;
         };
         Relationships: [];
       };
@@ -451,6 +958,7 @@ export interface Database {
           p_created_by: string;
           p_parcelas: { numero: number; valor: number; vencimento: string }[];
           p_ordem_servico_id?: string | null;
+          p_fornecedor_id?: string | null;
         };
         Returns: string;
       };
@@ -492,6 +1000,78 @@ export interface Database {
           p_created_by: string;
         };
         Returns: string[];
+      };
+      criar_pedido_compra: {
+        Args: {
+          p_workshop_id: string;
+          p_fornecedor_id: string;
+          p_categoria_id: string;
+          p_data_emissao: string;
+          p_previsao_entrega: string | null;
+          p_observacoes: string | null;
+          p_ordem_servico_id: string | null;
+          p_created_by: string;
+          p_itens: { descricao: string; quantidade: number; preco_unitario: number }[];
+        };
+        Returns: string;
+      };
+      receber_pedido_compra: {
+        Args: {
+          p_pedido_id: string;
+          p_itens: { pedido_item_id: string; quantidade: number }[];
+          p_data_recebimento: string;
+          p_vencimento: string;
+          p_observacoes: string | null;
+          p_created_by: string;
+        };
+        Returns: string;
+      };
+      consumir_peca_os: {
+        Args: {
+          p_ordem_id: string;
+          p_peca_id: string;
+          p_quantidade: number;
+          p_created_by: string;
+        };
+        Returns: string;
+      };
+      ajustar_estoque: {
+        Args: {
+          p_peca_id: string;
+          p_quantidade_contada: number;
+          p_observacao: string | null;
+          p_created_by: string;
+        };
+        Returns: string;
+      };
+      criar_orcamento: {
+        Args: {
+          p_workshop_id: string;
+          p_cliente_id: string;
+          p_veiculo_id: string;
+          p_queixa: string;
+          p_observacoes: string | null;
+          p_condicoes_pagamento: string | null;
+          p_validade: string;
+          p_itens: {
+            tipo: TipoItemOrcamento;
+            descricao: string;
+            quantidade: number;
+            preco_unitario: number;
+            desconto?: number;
+            peca_id?: string | null;
+          }[];
+          p_created_by: string;
+        };
+        Returns: string;
+      };
+      aprovar_orcamento: {
+        Args: {
+          p_orcamento_id: string;
+          p_itens_aprovados: string[];
+          p_created_by: string;
+        };
+        Returns: string;
       };
     };
   };

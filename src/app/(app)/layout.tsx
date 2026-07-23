@@ -1,8 +1,10 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSessaoAtual } from "@/lib/supabase/sessao";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Toaster } from "@/components/ui/sonner";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 export default async function AppLayout({
   children,
@@ -22,16 +24,20 @@ export default async function AppLayout({
     .eq("id", sessao.workshopId)
     .single();
 
+  const cookieStore = await cookies();
+  const sidebarAberta = cookieStore.get("sidebar_state")?.value !== "false";
+
   return (
-    <div className="flex min-h-screen">
+    <SidebarProvider defaultOpen={sidebarAberta}>
       <Sidebar
         nomeUsuario={sessao.nome}
         nomeOficina={workshop?.nome ?? ""}
+        papel={sessao.papel}
       />
-      <main className="flex-1 overflow-x-auto bg-background p-6">
+      <SidebarInset className="overflow-x-auto p-6">
         {children}
-      </main>
+      </SidebarInset>
       <Toaster />
-    </div>
+    </SidebarProvider>
   );
 }

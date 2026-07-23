@@ -55,6 +55,20 @@ export function formatarData(data: string): string {
   return formatadorData.format(new Date(comHorario));
 }
 
+const formatadorDataHora = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "America/Sao_Paulo",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+/** `data` em ISO completo (coluna `timestamptz`) — usado no ledger de estoque, onde vários lançamentos podem cair no mesmo dia. */
+export function formatarDataHora(data: string): string {
+  return formatadorDataHora.format(new Date(data));
+}
+
 const formatadorDataISO = new Intl.DateTimeFormat("en-CA", {
   timeZone: "America/Sao_Paulo",
 });

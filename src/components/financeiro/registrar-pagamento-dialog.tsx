@@ -90,7 +90,7 @@ export function RegistrarPagamentoDialog({
         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-1.5">
-              <Label htmlFor="valor">Valor pago (R$)</Label>
+              <Label htmlFor="valor" required>Valor pago (R$)</Label>
               <Input id="valor" type="text" inputMode="decimal" {...form.register("valor")} />
               {form.formState.errors.valor && (
                 <Erro msg={form.formState.errors.valor.message} />
@@ -112,7 +112,7 @@ export function RegistrarPagamentoDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-1.5">
-              <Label htmlFor="dataPagamento">Data do pagamento</Label>
+              <Label htmlFor="dataPagamento" required>Data do pagamento</Label>
               <Input id="dataPagamento" type="date" {...form.register("dataPagamento")} />
               {form.formState.errors.dataPagamento && (
                 <Erro msg={form.formState.errors.dataPagamento.message} />

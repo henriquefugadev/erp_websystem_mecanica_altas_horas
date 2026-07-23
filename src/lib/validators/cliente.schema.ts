@@ -25,16 +25,17 @@ export const clienteSchema = z
       .trim()
       .refine(validarCEP, "CEP inválido")
       .transform(normalizarCEP),
-    logradouro: z.string().trim().min(1, "Logradouro é obrigatório"),
+    logradouro: z.string().trim().min(1, "Endereço é obrigatório"),
     numero: z.string().trim().min(1, "Número é obrigatório"),
     complemento: z.string().trim().optional().or(z.literal("")),
-    bairro: z.string().trim().min(1, "Bairro é obrigatório"),
-    cidade: z.string().trim().min(1, "Cidade é obrigatória"),
+    bairro: z.string().trim().optional().or(z.literal("")),
+    cidade: z.string().trim().optional().or(z.literal("")),
     estado: z
       .string()
       .trim()
-      .length(2, "UF deve ter 2 letras")
-      .transform((v) => v.toUpperCase()),
+      .refine((v) => v === "" || v.length === 2, "UF deve ter 2 letras")
+      .transform((v) => (v === "" ? undefined : v.toUpperCase()))
+      .optional(),
     origem: z.string().trim().optional().or(z.literal("")),
     notas: z.string().trim().optional().or(z.literal("")),
     consenteEmail: z.boolean().default(false),

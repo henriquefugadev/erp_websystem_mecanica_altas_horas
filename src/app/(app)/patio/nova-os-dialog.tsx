@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { ordemServicoSchema, type OrdemServicoInput } from "@/lib/validators/ordem-servico.schema";
 import { criarOrdemAction } from "@/modules/patio/application/ordem-servico.actions";
+import type { ClienteOpcaoBusca } from "@/modules/crm/application/cliente.actions";
 import { formatarPlaca } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,18 +29,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ClienteCombobox } from "@/components/crm/cliente-combobox";
 
-export interface VeiculoOpcao {
-  id: string;
-  placa: string;
-  modelo: string;
-  marca: string | null;
-}
-
-export interface ClienteComVeiculos {
+export interface FuncionarioOpcao {
   id: string;
   nome: string;
-  veiculo: VeiculoOpcao[];
 }
 
 const DEFAULT_VALUES: OrdemServicoInput = {
@@ -47,14 +41,19 @@ const DEFAULT_VALUES: OrdemServicoInput = {
   veiculoId: "",
   queixa: "",
   descricao: "",
-  tecnico: "",
+  funcionarioId: "",
 };
 
-export function NovaOsDialog({ clientes }: { clientes: ClienteComVeiculos[] }) {
+export function NovaOsDialog({
+  funcionarios,
+}: {
+  funcionarios: FuncionarioOpcao[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [clienteSelecionado, setClienteSelecionado] = useState<ClienteOpcaoBusca | null>(null);
 
   const form = useForm<OrdemServicoInput>({
     resolver: zodResolver(ordemServicoSchema),
@@ -62,7 +61,7 @@ export function NovaOsDialog({ clientes }: { clientes: ClienteComVeiculos[] }) {
   });
 
   const clienteId = form.watch("clienteId");
-  const veiculosDoCliente = clientes.find((c) => c.id === clienteId)?.veiculo ?? [];
+  const veiculosDoCliente = clienteSelecionado?.veiculo ?? [];
 
   async function onSubmit(dados: OrdemServicoInput) {
     setErro(null);
@@ -89,6 +88,7 @@ export function NovaOsDialog({ clientes }: { clientes: ClienteComVeiculos[] }) {
         setOpen(v);
         if (v) {
           setErro(null);
+          setClienteSelecionado(null);
           form.reset(DEFAULT_VALUES);
         }
       }}
@@ -106,31 +106,20 @@ export function NovaOsDialog({ clientes }: { clientes: ClienteComVeiculos[] }) {
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
           <div className="grid gap-1.5">
-            <Label htmlFor="clienteId">Cliente</Label>
+            <Label htmlFor="clienteId" required>Cliente</Label>
             <Controller
               name="clienteId"
               control={form.control}
               render={({ field }) => (
-                <Select
-                  value={field.value}
-                  onValueChange={(v) => {
-                    field.onChange(v);
+                <ClienteCombobox
+                  id="clienteId"
+                  value={clienteSelecionado}
+                  onSelect={(cliente) => {
+                    setClienteSelecionado(cliente);
+                    field.onChange(cliente?.id ?? "");
                     form.setValue("veiculoId", "");
                   }}
-                >
-                  <SelectTrigger id="clienteId">
-                    <SelectValue placeholder="Selecione">
-                      {(v: string) => clientes.find((c) => c.id === v)?.nome ?? "Selecione"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clientes.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               )}
             />
             {form.formState.errors.clienteId && (
@@ -139,7 +128,7 @@ export function NovaOsDialog({ clientes }: { clientes: ClienteComVeiculos[] }) {
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="veiculoId">Veículo</Label>
+            <Label htmlFor="veiculoId" required>Veículo</Label>
             <Controller
               name="veiculoId"
               control={form.control}
@@ -173,15 +162,34 @@ export function NovaOsDialog({ clientes }: { clientes: ClienteComVeiculos[] }) {
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="queixa">Queixa do cliente</Label>
+            <Label htmlFor="queixa" required>Queixa do cliente</Label>
             <Textarea id="queixa" rows={2} {...form.register("queixa")} />
             {form.formState.errors.queixa && <Erro msg={form.formState.errors.queixa.message} />}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-1.5">
-              <Label htmlFor="tecnico">Técnico (opcional)</Label>
-              <Input id="tecnico" {...form.register("tecnico")} />
+              <Label htmlFor="funcionarioId">Técnico (opcional)</Label>
+              <Controller
+                name="funcionarioId"
+                control={form.control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="funcionarioId">
+                      <SelectValue placeholder="Selecione">
+                        {(v: string) => funcionarios.find((f) => f.id === v)?.nome ?? "Selecione"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {funcionarios.map((f) => (
+                        <SelectItem key={f.id} value={f.id}>
+                          {f.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="descricao">Observações (opcional)</Label>

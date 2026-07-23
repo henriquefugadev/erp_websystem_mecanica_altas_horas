@@ -5,11 +5,13 @@ import {
   buscarInadimplencia,
   buscarResumo,
 } from "@/modules/financeiro/data/dashboard.repository";
+import { intervalosPadrao } from "@/modules/financeiro/application/periodos";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { KpiCards } from "@/components/financeiro/kpi-cards";
+import { ResumoPeriodos } from "@/components/financeiro/resumo-periodos";
 import { FluxoCaixaChart } from "@/components/financeiro/fluxo-caixa-chart";
 import { InadimplenciaPanel } from "@/components/financeiro/inadimplencia-panel";
 
@@ -27,17 +29,32 @@ export default async function FinanceiroDashboardPage({
   const hoje = hojeSaoPaulo();
   const { de = trintaDiasAtras(hoje), ate = hoje } = await searchParams;
 
+  const intervalos = intervalosPadrao(hoje);
+
   const supabase = await createClient();
-  const [resumo, fluxo, inadimplencia] = await Promise.all([
+  const [resumo, fluxo, inadimplencia, resumoHoje, resumoSemana, resumoMes] = await Promise.all([
     buscarResumo(supabase, de, ate),
     buscarFluxoCaixa(supabase, de, ate),
     buscarInadimplencia(supabase),
+    buscarResumo(supabase, intervalos.hoje.de, intervalos.hoje.ate),
+    buscarResumo(supabase, intervalos.semana.de, intervalos.semana.ate),
+    buscarResumo(supabase, intervalos.mes.de, intervalos.mes.ate),
   ]);
 
   return (
     <div className="grid gap-6">
+      <h1 className="font-heading text-2xl">Financeiro</h1>
+
+      <ResumoPeriodos
+        periodos={[
+          { titulo: "Hoje", entradas: resumoHoje?.recebido_periodo ?? 0, saidas: resumoHoje?.pago_periodo ?? 0 },
+          { titulo: "Esta semana", entradas: resumoSemana?.recebido_periodo ?? 0, saidas: resumoSemana?.pago_periodo ?? 0 },
+          { titulo: "Este mês", entradas: resumoMes?.recebido_periodo ?? 0, saidas: resumoMes?.pago_periodo ?? 0 },
+        ]}
+      />
+
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="font-heading text-2xl">Financeiro</h1>
+        <h2 className="font-heading text-lg text-muted-foreground">Período personalizado</h2>
         <form className="flex items-end gap-2">
           <div className="grid gap-1.5">
             <Label htmlFor="de">De</Label>

@@ -5,7 +5,8 @@ import type { Galpao } from "../domain/types";
 
 type Client = SupabaseClient<Database>;
 
-const SELECT_QUADRO = "*, cliente(nome), veiculo(placa, modelo, marca), conta_financeira(status)";
+const SELECT_QUADRO =
+  "*, cliente(nome), veiculo(placa, modelo, marca), conta_financeira(status), funcionario(nome)";
 
 export async function listarOrdensDoQuadro(supabase: Client) {
   // O quadro é operacional, não um histórico: OS concluídas somem depois de
@@ -50,7 +51,7 @@ export async function criarOrdem(
       veiculo_id: dados.veiculoId,
       queixa: dados.queixa,
       descricao: dados.descricao || null,
-      tecnico: dados.tecnico || null,
+      funcionario_id: dados.funcionarioId || null,
     })
     .select()
     .single();

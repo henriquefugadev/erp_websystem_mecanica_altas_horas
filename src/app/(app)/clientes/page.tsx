@@ -78,7 +78,7 @@ export default async function ClientesPage({
               </TableCell>
               <TableCell>{formatarDocumento(cliente.documento)}</TableCell>
               <TableCell>{formatarTelefone(cliente.telefone)}</TableCell>
-              <TableCell>{cliente.cidade}</TableCell>
+              <TableCell>{cliente.cidade ?? "—"}</TableCell>
             </TableRow>
           ))}
         </TableBody>

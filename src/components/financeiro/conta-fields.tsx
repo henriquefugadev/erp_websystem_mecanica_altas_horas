@@ -69,7 +69,7 @@ export function ContaFields({
         </div>
 
         <div className="grid gap-1.5">
-          <Label htmlFor="categoriaId">Categoria</Label>
+          <Label htmlFor="categoriaId" required>Categoria</Label>
           <Controller
             name="categoriaId"
             control={control}
@@ -95,7 +95,7 @@ export function ContaFields({
       </div>
 
       <div className="grid gap-1.5">
-        <Label htmlFor="descricao">Descrição</Label>
+        <Label htmlFor="descricao" required>Descrição</Label>
         <Input id="descricao" {...register("descricao")} />
         {errors.descricao && <Erro msg={errors.descricao.message} />}
       </div>
@@ -130,7 +130,7 @@ export function ContaFields({
         </div>
       ) : (
         <div className="grid gap-1.5">
-          <Label htmlFor="fornecedorNome">Fornecedor</Label>
+          <Label htmlFor="fornecedorNome" required>Fornecedor</Label>
           <Input id="fornecedorNome" {...register("fornecedorNome")} />
           {errors.fornecedorNome && <Erro msg={errors.fornecedorNome.message} />}
         </div>
@@ -138,7 +138,7 @@ export function ContaFields({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="grid gap-1.5">
-          <Label htmlFor="valorTotal">Valor total (R$)</Label>
+          <Label htmlFor="valorTotal" required>Valor total (R$)</Label>
           <Input
             id="valorTotal"
             type="text"
@@ -148,7 +148,7 @@ export function ContaFields({
           {errors.valorTotal && <Erro msg={errors.valorTotal.message} />}
         </div>
         <div className="grid gap-1.5">
-          <Label htmlFor="dataEmissao">Data de emissão</Label>
+          <Label htmlFor="dataEmissao" required>Data de emissão</Label>
           <Input id="dataEmissao" type="date" {...register("dataEmissao")} />
           {errors.dataEmissao && <Erro msg={errors.dataEmissao.message} />}
         </div>

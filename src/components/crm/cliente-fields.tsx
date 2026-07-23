@@ -1,6 +1,12 @@
 "use client";
 
-import type { FieldErrors, UseFormRegister } from "react-hook-form";
+import { useState } from "react";
+import type {
+  FieldErrors,
+  UseFormGetValues,
+  UseFormRegister,
+  UseFormSetValue,
+} from "react-hook-form";
 import type { ClienteFormValues } from "./cliente-form-schema";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,16 +19,48 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Controller, type Control } from "react-hook-form";
+import { normalizarCEP } from "@/lib/validators/contato";
+import { buscarEnderecoPorCep } from "@/lib/format/via-cep";
 
 export function ClienteFields({
   register,
   errors,
   control,
+  setValue,
+  getValues,
 }: {
   register: UseFormRegister<ClienteFormValues>;
   errors: FieldErrors<ClienteFormValues>;
   control: Control<ClienteFormValues>;
+  setValue: UseFormSetValue<ClienteFormValues>;
+  getValues: UseFormGetValues<ClienteFormValues>;
 }) {
+  const [buscandoCep, setBuscandoCep] = useState(false);
+  const cepRegister = register("cep");
+
+  async function preencherPorCep() {
+    const digitos = normalizarCEP(getValues("cep") ?? "");
+    if (digitos.length !== 8) return;
+
+    setBuscandoCep(true);
+    const endereco = await buscarEnderecoPorCep(digitos);
+    setBuscandoCep(false);
+    if (!endereco) return;
+
+    if (!getValues("logradouro") && endereco.logradouro) {
+      setValue("logradouro", endereco.logradouro, { shouldValidate: true });
+    }
+    if (!getValues("bairro") && endereco.bairro) {
+      setValue("bairro", endereco.bairro);
+    }
+    if (!getValues("cidade") && endereco.cidade) {
+      setValue("cidade", endereco.cidade);
+    }
+    if (!getValues("estado") && endereco.estado) {
+      setValue("estado", endereco.estado);
+    }
+  }
+
   return (
     <div className="grid gap-4">
       <div className="grid grid-cols-2 gap-4">
@@ -46,21 +84,21 @@ export function ClienteFields({
           {errors.tipo && <Erro msg={errors.tipo.message} />}
         </div>
         <div className="grid gap-1.5">
-          <Label htmlFor="documento">CPF/CNPJ</Label>
+          <Label htmlFor="documento" required>CPF/CNPJ</Label>
           <Input id="documento" {...register("documento")} />
           {errors.documento && <Erro msg={errors.documento.message} />}
         </div>
       </div>
 
       <div className="grid gap-1.5">
-        <Label htmlFor="nome">Nome / Razão social</Label>
+        <Label htmlFor="nome" required>Nome / Razão social</Label>
         <Input id="nome" {...register("nome")} />
         {errors.nome && <Erro msg={errors.nome.message} />}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="grid gap-1.5">
-          <Label htmlFor="telefone">Telefone</Label>
+          <Label htmlFor="telefone" required>Telefone</Label>
           <Input id="telefone" {...register("telefone")} />
           {errors.telefone && <Erro msg={errors.telefone.message} />}
         </div>
@@ -73,12 +111,22 @@ export function ClienteFields({
 
       <div className="grid grid-cols-3 gap-4">
         <div className="grid gap-1.5">
-          <Label htmlFor="cep">CEP</Label>
-          <Input id="cep" {...register("cep")} />
+          <Label htmlFor="cep" required>CEP</Label>
+          <Input
+            id="cep"
+            {...cepRegister}
+            onBlur={(e) => {
+              cepRegister.onBlur(e);
+              preencherPorCep();
+            }}
+          />
           {errors.cep && <Erro msg={errors.cep.message} />}
+          {buscandoCep && (
+            <p className="text-xs text-muted-foreground">Buscando endereço…</p>
+          )}
         </div>
         <div className="col-span-2 grid gap-1.5">
-          <Label htmlFor="logradouro">Logradouro</Label>
+          <Label htmlFor="logradouro" required>Endereço</Label>
           <Input id="logradouro" {...register("logradouro")} />
           {errors.logradouro && <Erro msg={errors.logradouro.message} />}
         </div>
@@ -86,7 +134,7 @@ export function ClienteFields({
 
       <div className="grid grid-cols-3 gap-4">
         <div className="grid gap-1.5">
-          <Label htmlFor="numero">Número</Label>
+          <Label htmlFor="numero" required>Número</Label>
           <Input id="numero" {...register("numero")} />
           {errors.numero && <Erro msg={errors.numero.message} />}
         </div>

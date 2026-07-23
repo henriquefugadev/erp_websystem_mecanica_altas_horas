@@ -21,4 +21,5 @@ export type OrdemComRelacoes = OrdemServico & {
   // conta_financeira → ordem_servico agora é 1:N (itens da conclusão), então
   // o embed do PostgREST vem como array, não mais objeto único.
   conta_financeira: { status: string }[];
+  funcionario: { nome: string } | null;
 };

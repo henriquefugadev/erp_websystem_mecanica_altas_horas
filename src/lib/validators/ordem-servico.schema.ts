@@ -5,7 +5,7 @@ export const ordemServicoSchema = z.object({
   veiculoId: z.string().trim().min(1, "Veículo é obrigatório"),
   queixa: z.string().trim().min(1, "Descreva a queixa do cliente"),
   descricao: z.string().trim().optional().or(z.literal("")),
-  tecnico: z.string().trim().optional().or(z.literal("")),
+  funcionarioId: z.string().trim().optional().or(z.literal("")),
 });
 
 export type OrdemServicoInput = z.infer<typeof ordemServicoSchema>;

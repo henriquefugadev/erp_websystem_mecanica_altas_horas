@@ -18,6 +18,7 @@ export async function loginAction(
   });
 
   if (error) {
+    console.error("[loginAction] erro do Supabase:", error.status, error.message);
     return { ok: false, erro: "E-mail ou senha inválidos." };
   }
 

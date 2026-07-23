@@ -42,3 +42,6 @@ next-env.d.ts
 
 #pasta de documentação, contexto, e relatórios
 docs/
+
+#arquivo do claude
+CLAUDE.md

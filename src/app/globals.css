@@ -13,11 +13,16 @@
   --color-alert: #d62828;
   --color-alert-foreground: #ffffff;
   /* Paleta categórica validada (dataviz skill) para o dashboard financeiro:
-     entrada/saída são identidade (categórica), não status — o vermelho de
-     alerta fica reservado só para inadimplência/vencido, como no resto do
-     app. Verde é invariante entre os modos; azul reesteia para o modo escuro. */
-  --color-fin-entrada: #008300;
-  --color-fin-saida: #2a78d6;
+     entrada/saída traduzem quente x frio (frio = dinheiro que entra, quente =
+     dinheiro que sai) — o vermelho de alerta fica reservado só para
+     inadimplência/vencido, como no resto do app, nunca para "saída normal".
+     Teal (frio) + laranja (quente), não verde + laranja: verde+laranja
+     reprova a checagem de daltonismo (protanopia ΔE 4.9, abaixo do piso 6)
+     e as barras de entrada/saída se tocam no gráfico de fluxo de caixa, onde
+     o piso de adjacência não é dispensável por rótulo. Teal mantém a
+     intuição "verde = positivo". Ambos reestepam para o modo escuro. */
+  --color-fin-entrada: #0a8672;
+  --color-fin-saida: #c2570f;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -165,7 +170,9 @@
 
   --sidebar-ring: oklch(0.556 0 0);
 
-  --color-fin-saida: #3987e5;
+  --color-fin-entrada: #12a48f;
+
+  --color-fin-saida: #d07828;
 }
 
 @layer base {

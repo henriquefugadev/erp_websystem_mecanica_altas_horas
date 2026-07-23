@@ -44,14 +44,14 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
             <div className="grid gap-1.5">
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="email" required>E-mail</Label>
               <Input id="email" type="email" {...register("email")} />
               {errors.email && (
                 <p className="text-sm text-destructive">{errors.email.message}</p>
               )}
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="senha">Senha</Label>
+              <Label htmlFor="senha" required>Senha</Label>
               <Input id="senha" type="password" {...register("senha")} />
               {errors.senha && (
                 <p className="text-sm text-destructive">{errors.senha.message}</p>

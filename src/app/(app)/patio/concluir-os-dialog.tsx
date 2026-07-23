@@ -118,7 +118,7 @@ export function ConcluirOsDialog({
             {fields.map((field, index) => (
               <div key={field.id} className="flex items-end gap-2">
                 <div className="grid flex-1 gap-1.5">
-                  {index === 0 && <Label>Categoria</Label>}
+                  {index === 0 && <Label required>Categoria</Label>}
                   <Controller
                     name={`itens.${index}.categoriaId`}
                     control={form.control}
@@ -143,7 +143,7 @@ export function ConcluirOsDialog({
                   />
                 </div>
                 <div className="grid w-32 gap-1.5">
-                  {index === 0 && <Label>Valor (R$)</Label>}
+                  {index === 0 && <Label required>Valor (R$)</Label>}
                   <Input
                     type="text"
                     inputMode="decimal"
@@ -179,7 +179,7 @@ export function ConcluirOsDialog({
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="vencimento">Vencimento</Label>
+            <Label htmlFor="vencimento" required>Vencimento</Label>
             <Input id="vencimento" type="date" {...form.register("vencimento")} />
             {form.formState.errors.vencimento && (
               <Erro msg={form.formState.errors.vencimento.message} />
