@@ -735,6 +735,7 @@ export interface Database {
           quantidade: number;
           preco_unitario: number;
           quantidade_recebida: number;
+          orcamento_item_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -746,6 +747,7 @@ export interface Database {
           quantidade: number;
           preco_unitario: number;
           quantidade_recebida?: number;
+          orcamento_item_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["pedido_compra_item"]["Insert"]>;
         Relationships: [
@@ -1039,9 +1041,22 @@ export interface Database {
           p_observacoes: string | null;
           p_ordem_servico_id: string | null;
           p_created_by: string;
-          p_itens: { descricao: string; quantidade: number; preco_unitario: number }[];
+          p_itens: {
+            descricao: string;
+            quantidade: number;
+            preco_unitario: number;
+            orcamento_item_id?: string | null;
+          }[];
         };
         Returns: string;
+      };
+      gerar_pedidos_do_orcamento: {
+        Args: {
+          p_orcamento_id: string;
+          p_categoria_id: string;
+          p_created_by: string;
+        };
+        Returns: string[];
       };
       receber_pedido_compra: {
         Args: {

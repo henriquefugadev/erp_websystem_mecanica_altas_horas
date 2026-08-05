@@ -67,6 +67,23 @@ export async function criarPedido(
   return data as string;
 }
 
+// Status atual da OS vinculada — usado no recebimento para avisar quando a OS
+// que esperava peça foi liberada.
+export async function buscarStatusOrdem(
+  supabase: Client,
+  ordemId: string
+): Promise<{ numero: number; status: string; motivoParada: string | null } | null> {
+  const { data, error } = await supabase
+    .from("ordem_servico")
+    .select("numero, status, motivo_parada")
+    .eq("id", ordemId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  return { numero: data.numero, status: data.status, motivoParada: data.motivo_parada };
+}
+
 export async function receberPedido(
   supabase: Client,
   pedidoId: string,
@@ -96,4 +113,92 @@ export async function cancelarPedido(supabase: Client, id: string) {
     .eq("id", id);
 
   if (error) throw error;
+}
+
+// ============ Gerar pedidos a partir do orçamento aprovado (Fase 6) ============
+
+export interface GrupoPedido {
+  fornecedorId: string;
+  fornecedorNome: string;
+  itens: number;
+  total: number;
+}
+
+export interface ResumoPedidos {
+  grupos: GrupoPedido[];
+  itensSemFornecedor: number;
+  jaGerado: boolean;
+}
+
+// Prévia do que "Gerar pedidos" vai criar: um grupo por fornecedor (com total
+// pelo custo cotado), quantos itens ficam de fora (sem fornecedor ou sem custo)
+// e se os pedidos já foram gerados antes (evita duplicar).
+export async function resumoPedidosDoOrcamento(
+  supabase: Client,
+  orcamentoId: string
+): Promise<ResumoPedidos> {
+  type Row = {
+    id: string;
+    quantidade: number;
+    custo_cotado: number | null;
+    fornecedor_id: string | null;
+    fornecedor: { nome: string } | null;
+  };
+
+  const { data, error } = await supabase
+    .from("orcamento_item")
+    .select("id, quantidade, custo_cotado, fornecedor_id, fornecedor(nome)")
+    .eq("orcamento_id", orcamentoId)
+    .eq("tipo", "peca")
+    .eq("aprovado", true)
+    .overrideTypes<Row[], { merge: false }>();
+
+  if (error) throw error;
+
+  const grupos = new Map<string, GrupoPedido>();
+  let itensSemFornecedor = 0;
+  for (const item of data) {
+    if (item.fornecedor_id === null || item.custo_cotado === null) {
+      itensSemFornecedor += 1;
+      continue;
+    }
+    const grupo = grupos.get(item.fornecedor_id) ?? {
+      fornecedorId: item.fornecedor_id,
+      fornecedorNome: item.fornecedor?.nome ?? "—",
+      itens: 0,
+      total: 0,
+    };
+    grupo.itens += 1;
+    grupo.total += item.custo_cotado * item.quantidade;
+    grupos.set(item.fornecedor_id, grupo);
+  }
+
+  let jaGerado = false;
+  const ids = data.map((i) => i.id);
+  if (ids.length > 0) {
+    const { data: pedItens, error: erroPed } = await supabase
+      .from("pedido_compra_item")
+      .select("id")
+      .in("orcamento_item_id", ids)
+      .limit(1);
+    if (erroPed) throw erroPed;
+    jaGerado = (pedItens?.length ?? 0) > 0;
+  }
+
+  return { grupos: [...grupos.values()], itensSemFornecedor, jaGerado };
+}
+
+export async function gerarPedidosDoOrcamento(
+  supabase: Client,
+  orcamentoId: string,
+  categoriaId: string,
+  usuarioId: string
+): Promise<string[]> {
+  const { data, error } = await supabase.rpc("gerar_pedidos_do_orcamento", {
+    p_orcamento_id: orcamentoId,
+    p_categoria_id: categoriaId,
+    p_created_by: usuarioId,
+  });
+  if (error) throw error;
+  return (data ?? []) as string[];
 }

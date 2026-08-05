@@ -91,6 +91,11 @@ export function ReceberPedidoDialog({
         return;
       }
       toast.success("Recebimento registrado — conta a pagar gerada no Financeiro.");
+      if (resultado.data.osLiberada !== null) {
+        toast.success(
+          `Peças chegaram — OS #${resultado.data.osLiberada} liberada para execução.`
+        );
+      }
       setOpen(false);
       router.refresh();
     } finally {

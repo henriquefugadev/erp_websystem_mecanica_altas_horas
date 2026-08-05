@@ -8,11 +8,14 @@ import {
   calcularMargemPercentual,
   calcularSubtotalItem,
 } from "@/modules/orcamento/domain/calculo";
+import { resumoPedidosDoOrcamento } from "@/modules/fornecedores/data/pedido-compra.repository";
+import { listarCategorias } from "@/modules/financeiro/data/categoria.repository";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatarData, formatarDinheiro, formatarPlaca, formatarTelefone } from "@/lib/format";
 import { OrcamentoAcoes } from "./orcamento-acoes";
+import { GerarPedidosDialog } from "./gerar-pedidos-dialog";
 
 export default async function OrcamentoDetalhePage({
   params,
@@ -33,6 +36,16 @@ export default async function OrcamentoDetalhePage({
   const itensSemCotacao = orcamento.orcamento_item.filter(
     (item) => item.tipo === "peca" && item.custo_cotado === null
   ).length;
+
+  // Depois de aprovado, dá para gerar os pedidos de compra das peças aprovadas.
+  const podeGerarPedidos =
+    orcamento.status === "aprovado" || orcamento.status === "aprovado_parcial";
+  const [categoriasDespesa, resumoPedidos] = podeGerarPedidos
+    ? await Promise.all([
+        listarCategorias(supabase, "despesa"),
+        resumoPedidosDoOrcamento(supabase, id),
+      ])
+    : [[], null];
 
   return (
     <div className="grid max-w-4xl gap-6">
@@ -56,7 +69,16 @@ export default async function OrcamentoDetalhePage({
         </div>
       )}
 
-      <OrcamentoAcoes orcamento={orcamento} />
+      <div className="flex flex-wrap items-center gap-2">
+        <OrcamentoAcoes orcamento={orcamento} />
+        {podeGerarPedidos && resumoPedidos && (
+          <GerarPedidosDialog
+            orcamentoId={orcamento.id}
+            resumo={resumoPedidos}
+            categorias={categoriasDespesa}
+          />
+        )}
+      </div>
 
       <Card>
         <CardHeader>
