@@ -3,7 +3,7 @@
 -- documento classifica versionamento imutável, anexos e assinatura
 -- eletrônica como pós-MVP) — aqui é rascunho/enviado/aprovado(parcial)/
 -- recusado/cancelado, sem histórico de versões.
-
+--
 -- =========================================================================
 -- TABELAS
 -- =========================================================================

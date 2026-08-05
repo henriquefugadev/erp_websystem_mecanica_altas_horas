@@ -29,7 +29,7 @@ export default function RootLayout({
       lang="pt-BR"
       className={cn("h-full", "antialiased", inter.variable, oswald.variable, "font-sans")}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>
