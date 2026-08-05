@@ -39,6 +39,8 @@ export async function atualizarConfiguracao(
       estado: dados.estado || null,
       condicoes_pagamento_padrao: dados.condicoesPagamentoPadrao || null,
       validade_orcamento_dias: dados.validadeOrcamentoDias,
+      markup_peca_percentual: dados.markupPecaPercentual,
+      valor_hora_mao_obra: dados.valorHoraMaoObra,
     })
     .eq("id", workshopId)
     .select()

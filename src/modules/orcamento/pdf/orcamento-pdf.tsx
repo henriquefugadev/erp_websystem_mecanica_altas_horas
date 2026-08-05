@@ -47,6 +47,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eeeeee",
     paddingVertical: 4,
   },
+  colNumero: { width: 18 },
   colDescricao: { flex: 3 },
   colQtd: { flex: 1, textAlign: "right" },
   colPreco: { flex: 1.2, textAlign: "right" },
@@ -137,14 +138,16 @@ export function OrcamentoPdf({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Itens</Text>
           <View style={styles.tableHeaderRow}>
+            <Text style={styles.colNumero}>Nº</Text>
             <Text style={styles.colDescricao}>Descrição</Text>
             <Text style={styles.colQtd}>Qtd.</Text>
             <Text style={styles.colPreco}>Preço unit.</Text>
             <Text style={styles.colDesconto}>Desconto</Text>
             <Text style={styles.colSubtotal}>Subtotal</Text>
           </View>
-          {orcamento.orcamento_item.map((item) => (
+          {orcamento.orcamento_item.map((item, indice) => (
             <View key={item.id} style={styles.tableRow}>
+              <Text style={styles.colNumero}>{indice + 1}</Text>
               <Text style={styles.colDescricao}>{item.descricao}</Text>
               <Text style={styles.colQtd}>{item.quantidade}</Text>
               <Text style={styles.colPreco}>{formatarDinheiro(item.preco_unitario)}</Text>

@@ -29,8 +29,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+const DATALIST_PECAS = "orcamento-pecas-catalogo";
+
+interface PecaOpcao {
+  id: string;
+  nome: string;
+  precoVenda: number;
+}
+
 function itemVazio(): OrcamentoInput["itens"][number] {
-  return { tipo: "servico", descricao: "", quantidade: "", precoUnitario: "", desconto: "" };
+  return {
+    tipo: "servico",
+    pecaId: "",
+    descricao: "",
+    quantidade: "",
+    precoUnitario: "",
+    desconto: "",
+  };
 }
 
 function valoresIniciais(
@@ -51,13 +66,28 @@ function valoresIniciais(
 export function NovoOrcamentoForm({
   condicoesPagamentoPadrao,
   validadePadrao,
+  pecas,
 }: {
   condicoesPagamentoPadrao: string;
   validadePadrao: string;
+  pecas: PecaOpcao[];
 }) {
   const router = useRouter();
   const [erro, setErro] = useState<string | null>(null);
   const [clienteSelecionado, setClienteSelecionado] = useState<ClienteOpcaoBusca | null>(null);
+
+  // Ao escolher uma peça do catálogo pelo nome: grava o peca_id, marca como
+  // peça e sugere o preço de venda cadastrado (se o campo ainda estiver vazio).
+  function escolherPeca(index: number, valor: string) {
+    const peca = pecas.find((p) => p.nome === valor);
+    form.setValue(`itens.${index}.pecaId`, peca?.id ?? "");
+    if (peca) {
+      form.setValue(`itens.${index}.tipo`, "peca");
+      if (!form.getValues(`itens.${index}.precoUnitario`)) {
+        form.setValue(`itens.${index}.precoUnitario`, String(peca.precoVenda));
+      }
+    }
+  }
 
   const form = useForm<OrcamentoInput, unknown, OrcamentoOutput>({
     resolver: zodResolver(orcamentoSchema),
@@ -173,6 +203,12 @@ export function NovoOrcamentoForm({
         <CardContent className="grid gap-3 pt-6">
           <Label>Itens</Label>
 
+          <datalist id={DATALIST_PECAS}>
+            {pecas.map((p) => (
+              <option key={p.id} value={p.nome} />
+            ))}
+          </datalist>
+
           {fields.map((field, index) => (
             <div key={field.id} className="grid grid-cols-12 items-end gap-2">
               <div className="col-span-2 grid gap-1.5">
@@ -195,7 +231,19 @@ export function NovoOrcamentoForm({
               </div>
               <div className="col-span-4 grid gap-1.5">
                 {index === 0 && <Label required>Descrição</Label>}
-                <Input {...form.register(`itens.${index}.descricao`)} />
+                {(() => {
+                  const reg = form.register(`itens.${index}.descricao`);
+                  return (
+                    <Input
+                      list={DATALIST_PECAS}
+                      {...reg}
+                      onChange={(e) => {
+                        reg.onChange(e);
+                        escolherPeca(index, e.target.value);
+                      }}
+                    />
+                  );
+                })()}
               </div>
               <div className="col-span-2 grid gap-1.5">
                 {index === 0 && <Label required>Qtd.</Label>}

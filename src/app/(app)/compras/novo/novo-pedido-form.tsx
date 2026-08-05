@@ -31,7 +31,7 @@ interface Opcao {
 interface OrdemOpcao {
   id: string;
   numero: number;
-  queixa: string;
+  queixa: string | null;
 }
 
 type FormValues = z.input<typeof pedidoCompraSchema>;
@@ -183,14 +183,14 @@ export function NovoPedidoForm({
                     <SelectValue placeholder="Nenhuma">
                       {(v: string) => {
                         const os = ordens.find((o) => o.id === v);
-                        return os ? `OS #${os.numero} — ${os.queixa}` : "Nenhuma";
+                        return os ? `OS #${os.numero} — ${os.queixa ?? "sem queixa"}` : "Nenhuma";
                       }}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {ordens.map((o) => (
                       <SelectItem key={o.id} value={o.id}>
-                        OS #{o.numero} — {o.queixa}
+                        OS #{o.numero} — {o.queixa ?? "sem queixa"}
                       </SelectItem>
                     ))}
                   </SelectContent>

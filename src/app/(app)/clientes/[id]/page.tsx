@@ -41,8 +41,8 @@ export default async function ClienteDetalhePage({
         <div>
           <h1 className="font-heading text-2xl">{cliente.nome}</h1>
           <p className="text-sm text-muted-foreground">
-            {cliente.tipo === "PF" ? "Pessoa física" : "Pessoa jurídica"} ·{" "}
-            {formatarDocumento(cliente.documento)}
+            {cliente.tipo === "PF" ? "Pessoa física" : "Pessoa jurídica"}
+            {cliente.documento ? ` · ${formatarDocumento(cliente.documento)}` : ""}
           </p>
         </div>
         <div className="flex gap-2">
@@ -65,9 +65,13 @@ export default async function ClienteDetalhePage({
           <Campo rotulo="E-mail" valor={cliente.email ?? "—"} />
           <Campo
             rotulo="Endereço"
-            valor={`${cliente.logradouro}, ${cliente.numero}${
-              cliente.complemento ? ` - ${cliente.complemento}` : ""
-            }`}
+            valor={
+              cliente.logradouro
+                ? `${cliente.logradouro}, ${cliente.numero ?? "s/n"}${
+                    cliente.complemento ? ` - ${cliente.complemento}` : ""
+                  }`
+                : "—"
+            }
           />
           <Campo rotulo="Bairro" valor={cliente.bairro ?? "—"} />
           <Campo
@@ -78,7 +82,7 @@ export default async function ClienteDetalhePage({
                 : "—"
             }
           />
-          <Campo rotulo="CEP" valor={formatarCEP(cliente.cep)} />
+          <Campo rotulo="CEP" valor={cliente.cep ? formatarCEP(cliente.cep) : "—"} />
         </CardContent>
       </Card>
 

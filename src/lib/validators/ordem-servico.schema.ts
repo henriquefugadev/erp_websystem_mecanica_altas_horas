@@ -3,7 +3,9 @@ import { z } from "zod";
 export const ordemServicoSchema = z.object({
   clienteId: z.string().trim().min(1, "Cliente é obrigatório"),
   veiculoId: z.string().trim().min(1, "Veículo é obrigatório"),
-  queixa: z.string().trim().min(1, "Descreva a queixa do cliente"),
+  // Queixa opcional: na recepção o cliente muitas vezes só "larga o carro"
+  // sem descrever o problema — a avaliação vem depois, com os mecânicos.
+  queixa: z.string().trim().optional().or(z.literal("")),
   descricao: z.string().trim().optional().or(z.literal("")),
   funcionarioId: z.string().trim().optional().or(z.literal("")),
 });

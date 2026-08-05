@@ -2,8 +2,10 @@
 
 import { useEffect } from "react";
 import type { DragEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { LogIn } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   cancelarOrdemAction,
@@ -22,6 +24,7 @@ import {
   type OrdemComRelacoes,
 } from "@/modules/patio/domain/types";
 import type { StatusOS } from "@/lib/supabase/database.types";
+import { Button } from "@/components/ui/button";
 import { OsCard } from "./os-card";
 import { NovaOsDialog, type FuncionarioOpcao } from "./nova-os-dialog";
 import type { PecaOpcao } from "./usar-peca-dialog";
@@ -33,11 +36,13 @@ export function KanbanBoard({
   categoriasReceita,
   funcionarios,
   pecas,
+  diagnosticoPorOs,
 }: {
   ordens: OrdemComRelacoes[];
   categoriasReceita: { id: string; nome: string }[];
   funcionarios: FuncionarioOpcao[];
   pecas: PecaOpcao[];
+  diagnosticoPorOs: Record<string, number>;
 }) {
   const router = useRouter();
 
@@ -147,9 +152,15 @@ export function KanbanBoard({
 
   return (
     <div className="grid gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="font-heading text-2xl">Pátio</h1>
-        <NovaOsDialog funcionarios={funcionarios} />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" render={<Link href="/patio/entrada" />}>
+            <LogIn className="size-4" />
+            Entrada de veículo
+          </Button>
+          <NovaOsDialog funcionarios={funcionarios} />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 text-xs">
@@ -203,6 +214,7 @@ export function KanbanBoard({
                     )}
                     categoriasReceita={categoriasReceita}
                     pecas={pecas}
+                    diagnosticoCount={diagnosticoPorOs[ordem.id] ?? 0}
                     onIniciar={() => void iniciar(ordem.id)}
                     onVoltar={() => void voltar(ordem.id)}
                     onPausar={() => void pausar(ordem.id)}

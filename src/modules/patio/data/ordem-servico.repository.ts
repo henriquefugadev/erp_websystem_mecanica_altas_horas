@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { OrdemServicoInput } from "@/lib/validators/ordem-servico.schema";
-import type { Galpao } from "../domain/types";
+import type { Galpao, MotivoParada } from "../domain/types";
 
 type Client = SupabaseClient<Database>;
 
@@ -23,6 +23,33 @@ export async function listarOrdensDoQuadro(supabase: Client) {
 
   if (error) throw error;
   return data;
+}
+
+// Quantos itens de diagnóstico (itens do rascunho de orçamento) cada OS já
+// tem — alimenta o badge "Diagnóstico: N itens" no card. Uma query só para o
+// quadro inteiro, agrupando por OS na aplicação.
+export async function contarDiagnosticoPorOs(
+  supabase: Client
+): Promise<Record<string, number>> {
+  type Row = { ordem_servico_id: string | null; orcamento_item: { count: number }[] };
+
+  const { data, error } = await supabase
+    .from("orcamento")
+    .select("ordem_servico_id, orcamento_item(count)")
+    .eq("status", "rascunho")
+    .not("ordem_servico_id", "is", null)
+    .is("deleted_at", null)
+    .overrideTypes<Row[], { merge: false }>();
+
+  if (error) throw error;
+
+  const mapa: Record<string, number> = {};
+  for (const row of data) {
+    if (!row.ordem_servico_id) continue;
+    const total = row.orcamento_item[0]?.count ?? 0;
+    mapa[row.ordem_servico_id] = (mapa[row.ordem_servico_id] ?? 0) + total;
+  }
+  return mapa;
 }
 
 export async function buscarOrdemPorId(supabase: Client, id: string) {
@@ -49,7 +76,7 @@ export async function criarOrdem(
       created_by: usuarioId,
       cliente_id: dados.clienteId,
       veiculo_id: dados.veiculoId,
-      queixa: dados.queixa,
+      queixa: dados.queixa || null,
       descricao: dados.descricao || null,
       funcionario_id: dados.funcionarioId || null,
     })
@@ -74,16 +101,20 @@ export async function iniciarOrdem(supabase: Client, id: string, galpao: Galpao)
 export async function voltarParaAguardando(supabase: Client, id: string) {
   const { error } = await supabase
     .from("ordem_servico")
-    .update({ status: "aguardando", galpao: null, data_inicio: null })
+    .update({ status: "aguardando", galpao: null, data_inicio: null, motivo_parada: null })
     .eq("id", id);
 
   if (error) throw error;
 }
 
-export async function pausarOrdem(supabase: Client, id: string) {
+export async function pausarOrdem(supabase: Client, id: string, motivo?: MotivoParada) {
   const { error } = await supabase
     .from("ordem_servico")
-    .update({ status: "parado", data_pausa: new Date().toISOString() })
+    .update({
+      status: "parado",
+      data_pausa: new Date().toISOString(),
+      motivo_parada: motivo ?? null,
+    })
     .eq("id", id);
 
   if (error) throw error;
@@ -92,7 +123,7 @@ export async function pausarOrdem(supabase: Client, id: string) {
 export async function retomarOrdem(supabase: Client, id: string) {
   const { error } = await supabase
     .from("ordem_servico")
-    .update({ status: "em_execucao", data_pausa: null })
+    .update({ status: "em_execucao", data_pausa: null, motivo_parada: null })
     .eq("id", id);
 
   if (error) throw error;

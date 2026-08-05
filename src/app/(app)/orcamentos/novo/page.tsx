@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessaoAtual } from "@/lib/supabase/sessao";
 import { buscarConfiguracao } from "@/modules/workshop/data/workshop.repository";
+import { listarPecas } from "@/modules/estoque/data/peca.repository";
 import { hojeSaoPaulo } from "@/lib/format";
 import { NovoOrcamentoForm } from "./novo-orcamento-form";
 
@@ -9,7 +10,10 @@ const UM_DIA_MS = 24 * 60 * 60 * 1000;
 export default async function NovoOrcamentoPage() {
   const sessao = await getSessaoAtual();
   const supabase = await createClient();
-  const workshop = sessao ? await buscarConfiguracao(supabase, sessao.workshopId) : null;
+  const [workshop, pecas] = await Promise.all([
+    sessao ? buscarConfiguracao(supabase, sessao.workshopId) : Promise.resolve(null),
+    listarPecas(supabase, true),
+  ]);
 
   const hoje = hojeSaoPaulo();
   const validadeDias = workshop?.validade_orcamento_dias ?? 10;
@@ -23,6 +27,7 @@ export default async function NovoOrcamentoPage() {
       <NovoOrcamentoForm
         condicoesPagamentoPadrao={workshop?.condicoes_pagamento_padrao ?? ""}
         validadePadrao={validadePadrao}
+        pecas={pecas.map((p) => ({ id: p.id, nome: p.nome, precoVenda: p.preco_venda }))}
       />
     </div>
   );

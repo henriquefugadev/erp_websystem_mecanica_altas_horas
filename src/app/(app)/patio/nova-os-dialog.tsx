@@ -162,7 +162,7 @@ export function NovaOsDialog({
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="queixa" required>Queixa do cliente</Label>
+            <Label htmlFor="queixa">Queixa do cliente (opcional)</Label>
             <Textarea id="queixa" rows={2} {...form.register("queixa")} />
             {form.formState.errors.queixa && <Erro msg={form.formState.errors.queixa.message} />}
           </div>

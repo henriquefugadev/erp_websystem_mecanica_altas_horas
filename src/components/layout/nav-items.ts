@@ -1,6 +1,7 @@
 import {
   Boxes,
   ClipboardList,
+  DollarSign,
   LayoutDashboard,
   LayoutGrid,
   Receipt,
@@ -40,6 +41,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Compras",
     items: [
+      { href: "/cotacoes", label: "Cotações", icon: DollarSign },
       { href: "/fornecedores", label: "Fornecedores", icon: Truck },
       { href: "/compras", label: "Pedidos", icon: ShoppingCart },
       { href: "/funcionarios", label: "Funcionários", icon: UserCog },

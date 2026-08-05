@@ -56,3 +56,36 @@ export const clienteSchema = z
   }));
 
 export type ClienteInput = z.infer<typeof clienteSchema>;
+
+// Cadastro relâmpago da recepção (tela de entrada de veículo): só nome e
+// telefone são obrigatórios. Documento e endereço ficam para depois — a
+// Michele completa quando (e se) precisar emitir nota. `documento` só é
+// validado quando de fato preenchido.
+export const clienteRapidoSchema = z
+  .object({
+    tipo: z.enum(["PF", "PJ"]).default("PF"),
+    nome: z.string().trim().min(1, "Nome é obrigatório"),
+    telefone: z
+      .string()
+      .trim()
+      .min(1, "Telefone é obrigatório")
+      .refine(validarTelefone, "Telefone inválido")
+      .transform(normalizarTelefone),
+    documento: z.string().trim().optional().or(z.literal("")),
+  })
+  .superRefine((dados, ctx) => {
+    if (dados.documento && !validarDocumento(dados.tipo, dados.documento)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["documento"],
+        message: dados.tipo === "PF" ? "CPF inválido" : "CNPJ inválido",
+      });
+    }
+  })
+  .transform((dados) => ({
+    ...dados,
+    documento: dados.documento ? normalizarDocumento(dados.documento) : undefined,
+  }));
+
+export type ClienteRapidoInput = z.input<typeof clienteRapidoSchema>;
+export type ClienteRapidoOutput = z.output<typeof clienteRapidoSchema>;

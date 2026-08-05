@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
-import type { ClienteInput } from "@/lib/validators/cliente.schema";
+import type { ClienteInput, ClienteRapidoOutput } from "@/lib/validators/cliente.schema";
 
 type Client = SupabaseClient<Database>;
 
@@ -20,6 +20,42 @@ export async function listarClientes(supabase: Client, busca?: string) {
     .select("*")
     .is("deleted_at", null)
     .order("nome");
+
+  if (error) throw error;
+  return data;
+}
+
+// Busca da recepção: além de nome/documento/telefone, casa por placa e
+// modelo do veículo (RPC buscar_clientes_veiculos, 0012) — que é o dado que a
+// Michele costuma ter em mãos no balcão.
+export async function buscarClientesEVeiculos(supabase: Client, busca: string) {
+  const { data, error } = await supabase.rpc("buscar_clientes_veiculos", {
+    p_termo: busca.trim(),
+  });
+  if (error) throw error;
+  return data;
+}
+
+// Cadastro relâmpago: só os campos que a recepção tem na hora. Os demais
+// ficam nulos e são completados depois na tela de cliente.
+export async function criarClienteRapido(
+  supabase: Client,
+  workshopId: string,
+  usuarioId: string,
+  dados: ClienteRapidoOutput
+) {
+  const { data, error } = await supabase
+    .from("cliente")
+    .insert({
+      workshop_id: workshopId,
+      created_by: usuarioId,
+      tipo: dados.tipo,
+      nome: dados.nome,
+      telefone: dados.telefone,
+      documento: dados.documento ?? null,
+    })
+    .select()
+    .single();
 
   if (error) throw error;
   return data;

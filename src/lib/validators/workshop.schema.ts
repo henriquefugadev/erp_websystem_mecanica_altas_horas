@@ -41,6 +41,8 @@ export const workshopSchema = z.object({
     .or(z.literal("")),
   condicoesPagamentoPadrao: z.string().trim().optional().or(z.literal("")),
   validadeOrcamentoDias: z.coerce.number().int().min(1, "Mínimo 1 dia"),
+  markupPecaPercentual: z.coerce.number().min(0, "Não pode ser negativo"),
+  valorHoraMaoObra: z.coerce.number().min(0, "Não pode ser negativo"),
 });
 
 // workshopSchema termina com .transform() em vários campos; o formulário

@@ -19,6 +19,11 @@ export type FormaPagamento =
   | "pix"
   | "boleto";
 export type StatusOS = "aguardando" | "em_execucao" | "parado" | "concluido" | "cancelada";
+export type MotivoParada =
+  | "aguardando_peca"
+  | "aguardando_aprovacao"
+  | "aguardando_cliente"
+  | "outro";
 export type StatusPedidoCompra = "aberto" | "parcial" | "recebido" | "cancelado";
 export type TipoMovimentacaoEstoque =
   | "entrada"
@@ -57,6 +62,8 @@ export interface Database {
           estado: string | null;
           condicoes_pagamento_padrao: string | null;
           validade_orcamento_dias: number;
+          markup_peca_percentual: number;
+          valor_hora_mao_obra: number;
           logo_path: string | null;
           created_at: string;
           updated_at: string;
@@ -78,6 +85,8 @@ export interface Database {
           estado?: string | null;
           condicoes_pagamento_padrao?: string | null;
           validade_orcamento_dias?: number;
+          markup_peca_percentual?: number;
+          valor_hora_mao_obra?: number;
           logo_path?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["workshop"]["Insert"]>;
@@ -122,12 +131,12 @@ export interface Database {
           workshop_id: string;
           tipo: TipoCliente;
           nome: string;
-          documento: string;
+          documento: string | null;
           telefone: string;
           email: string | null;
-          cep: string;
-          logradouro: string;
-          numero: string;
+          cep: string | null;
+          logradouro: string | null;
+          numero: string | null;
           complemento: string | null;
           bairro: string | null;
           cidade: string | null;
@@ -146,12 +155,12 @@ export interface Database {
           workshop_id: string;
           tipo: TipoCliente;
           nome: string;
-          documento: string;
+          documento?: string | null;
           telefone: string;
           email?: string | null;
-          cep: string;
-          logradouro: string;
-          numero: string;
+          cep?: string | null;
+          logradouro?: string | null;
+          numero?: string | null;
           complemento?: string | null;
           bairro?: string | null;
           cidade?: string | null;
@@ -414,11 +423,12 @@ export interface Database {
           numero: number;
           cliente_id: string;
           veiculo_id: string;
-          queixa: string;
+          queixa: string | null;
           descricao: string | null;
           funcionario_id: string | null;
           status: StatusOS;
           galpao: number | null;
+          motivo_parada: MotivoParada | null;
           orcamento_id: string | null;
           data_abertura: string;
           data_inicio: string | null;
@@ -434,11 +444,12 @@ export interface Database {
           workshop_id: string;
           cliente_id: string;
           veiculo_id: string;
-          queixa: string;
+          queixa?: string | null;
           descricao?: string | null;
           funcionario_id?: string | null;
           status?: StatusOS;
           galpao?: number | null;
+          motivo_parada?: MotivoParada | null;
           orcamento_id?: string | null;
           created_by?: string | null;
         };
@@ -481,7 +492,7 @@ export interface Database {
           numero: number;
           cliente_id: string;
           veiculo_id: string;
-          queixa: string;
+          queixa: string | null;
           observacoes: string | null;
           condicoes_pagamento: string | null;
           status: StatusOrcamento;
@@ -501,7 +512,7 @@ export interface Database {
           workshop_id: string;
           cliente_id: string;
           veiculo_id: string;
-          queixa: string;
+          queixa?: string | null;
           observacoes?: string | null;
           condicoes_pagamento?: string | null;
           status?: StatusOrcamento;
@@ -540,12 +551,15 @@ export interface Database {
           workshop_id: string;
           orcamento_id: string;
           peca_id: string | null;
+          fornecedor_id: string | null;
           tipo: TipoItemOrcamento;
           descricao: string;
           quantidade: number;
           preco_unitario: number;
           desconto: number;
-          aprovado: boolean;
+          custo_cotado: number | null;
+          cotado_em: string | null;
+          aprovado: boolean | null;
           created_at: string;
           updated_at: string;
         };
@@ -554,12 +568,15 @@ export interface Database {
           workshop_id: string;
           orcamento_id: string;
           peca_id?: string | null;
+          fornecedor_id?: string | null;
           tipo: TipoItemOrcamento;
           descricao: string;
           quantidade?: number;
           preco_unitario: number;
           desconto?: number;
-          aprovado?: boolean;
+          custo_cotado?: number | null;
+          cotado_em?: string | null;
+          aprovado?: boolean | null;
         };
         Update: Partial<Database["public"]["Tables"]["orcamento_item"]["Insert"]>;
         Relationships: [
@@ -568,6 +585,13 @@ export interface Database {
             columns: ["orcamento_id"];
             isOneToOne: false;
             referencedRelation: "orcamento";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orcamento_item_fornecedor_id_fkey";
+            columns: ["fornecedor_id"];
+            isOneToOne: false;
+            referencedRelation: "fornecedor";
             referencedColumns: ["id"];
           },
         ];
@@ -920,7 +944,7 @@ export interface Database {
           numero: number;
           cliente_id: string;
           veiculo_id: string;
-          queixa: string;
+          queixa: string | null;
           observacoes: string | null;
           condicoes_pagamento: string | null;
           status: StatusOrcamento;
@@ -941,6 +965,10 @@ export interface Database {
     };
     Functions: {
       buscar_clientes: {
+        Args: { p_termo: string };
+        Returns: Database["public"]["Tables"]["cliente"]["Row"][];
+      };
+      buscar_clientes_veiculos: {
         Args: { p_termo: string };
         Returns: Database["public"]["Tables"]["cliente"]["Row"][];
       };
@@ -1072,6 +1100,54 @@ export interface Database {
           p_created_by: string;
         };
         Returns: string;
+      };
+      criar_orcamento_da_os: {
+        Args: {
+          p_ordem_id: string;
+          p_itens: {
+            tipo: TipoItemOrcamento;
+            descricao: string;
+            quantidade: number;
+            peca_id?: string | null;
+            fornecedor_id?: string | null;
+            preco_unitario?: number;
+            desconto?: number;
+            custo_cotado?: number | null;
+          }[];
+          p_created_by: string;
+        };
+        Returns: string;
+      };
+      atualizar_itens_orcamento: {
+        Args: {
+          p_orcamento_id: string;
+          p_itens: {
+            tipo: TipoItemOrcamento;
+            descricao: string;
+            quantidade: number;
+            peca_id?: string | null;
+            fornecedor_id?: string | null;
+            preco_unitario?: number;
+            desconto?: number;
+            custo_cotado?: number | null;
+          }[];
+        };
+        Returns: void;
+      };
+      recalcular_total_orcamento: {
+        Args: { p_orcamento_id: string };
+        Returns: void;
+      };
+      salvar_cotacoes: {
+        Args: {
+          p_itens: {
+            id: string;
+            fornecedor_id?: string | null;
+            custo_cotado?: number | null;
+            preco_unitario?: number | null;
+          }[];
+        };
+        Returns: void;
       };
     };
   };

@@ -76,7 +76,9 @@ export default async function ClientesPage({
                   {cliente.nome}
                 </Link>
               </TableCell>
-              <TableCell>{formatarDocumento(cliente.documento)}</TableCell>
+              <TableCell>
+                {cliente.documento ? formatarDocumento(cliente.documento) : "—"}
+              </TableCell>
               <TableCell>{formatarTelefone(cliente.telefone)}</TableCell>
               <TableCell>{cliente.cidade ?? "—"}</TableCell>
             </TableRow>

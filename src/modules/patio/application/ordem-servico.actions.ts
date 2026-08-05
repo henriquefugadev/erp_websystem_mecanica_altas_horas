@@ -21,7 +21,7 @@ import {
   voltarParaAguardando,
 } from "@/modules/patio/data/ordem-servico.repository";
 import { galpaoMenosOcupado, transicaoPermitida } from "@/modules/patio/domain/status";
-import { GALPOES, STATUS_OS_LABEL, type Galpao } from "@/modules/patio/domain/types";
+import { GALPOES, STATUS_OS_LABEL, type Galpao, type MotivoParada } from "@/modules/patio/domain/types";
 import { mensagemDeErro } from "@/modules/financeiro/application/erros";
 
 export type ActionResult<T> =
@@ -98,7 +98,10 @@ export async function voltarOrdemAction(id: string): Promise<ActionResult<null>>
   }
 }
 
-export async function pausarOrdemAction(id: string): Promise<ActionResult<null>> {
+export async function pausarOrdemAction(
+  id: string,
+  motivo?: MotivoParada
+): Promise<ActionResult<null>> {
   const sessao = await getSessaoAtual();
   if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
 
@@ -112,7 +115,7 @@ export async function pausarOrdemAction(id: string): Promise<ActionResult<null>>
       };
     }
 
-    await pausarOrdem(supabase, id);
+    await pausarOrdem(supabase, id, motivo);
     revalidatePath("/patio");
     return { ok: true, data: null };
   } catch (e) {

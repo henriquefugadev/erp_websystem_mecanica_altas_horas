@@ -40,6 +40,8 @@ function valoresIniciais(workshop: Workshop): WorkshopFormValues {
     estado: workshop.estado ?? "",
     condicoesPagamentoPadrao: workshop.condicoes_pagamento_padrao ?? "",
     validadeOrcamentoDias: workshop.validade_orcamento_dias,
+    markupPecaPercentual: workshop.markup_peca_percentual,
+    valorHoraMaoObra: workshop.valor_hora_mao_obra,
   };
 }
 
@@ -285,6 +287,43 @@ export function ConfiguracoesForm({
               {errors.validadeOrcamentoDias && (
                 <Erro msg={errors.validadeOrcamentoDias.message} />
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Precificação</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-4">
+            <div className="grid gap-1.5">
+              <Label htmlFor="markupPecaPercentual" required>
+                Markup de peça (%)
+              </Label>
+              <Input
+                id="markupPecaPercentual"
+                type="number"
+                min={0}
+                step="0.01"
+                {...form.register("markupPecaPercentual")}
+              />
+              <p className="text-xs text-muted-foreground">
+                Aplicado sobre o custo cotado para sugerir o preço de venda.
+              </p>
+              {errors.markupPecaPercentual && (
+                <Erro msg={errors.markupPecaPercentual.message} />
+              )}
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="valorHoraMaoObra">Valor da hora de mão de obra (R$)</Label>
+              <Input
+                id="valorHoraMaoObra"
+                type="number"
+                min={0}
+                step="0.01"
+                {...form.register("valorHoraMaoObra")}
+              />
+              {errors.valorHoraMaoObra && <Erro msg={errors.valorHoraMaoObra.message} />}
             </div>
           </CardContent>
         </Card>

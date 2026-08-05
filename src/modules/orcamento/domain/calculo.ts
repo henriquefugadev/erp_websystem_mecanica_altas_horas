@@ -20,3 +20,21 @@ export function calcularTotalOrcamento(itens: ItemCalculavel[]): number {
   const total = itens.reduce((soma, item) => soma + calcularSubtotalItem(item), 0);
   return arredondarCentavos(total);
 }
+
+// Preço de venda sugerido a partir do custo cotado e do markup (%) da oficina:
+// custo × (1 + markup/100), arredondado ao centavo. Fonte única da regra — a
+// RPC salvar_cotacoes (0014) só grava o valor calculado aqui, não recalcula.
+export function aplicarMarkup(custo: number, markupPercentual: number): number {
+  return arredondarCentavos(custo * (1 + markupPercentual / 100));
+}
+
+// Margem sobre o preço de venda: (preço − custo) / preço × 100. Visão interna
+// (nunca vai pro cliente), ajuda a Michele a ver quanto sobra em cada peça.
+// Retorna null quando não dá pra calcular (sem preço ou sem custo cotado).
+export function calcularMargemPercentual(
+  precoUnitario: number,
+  custo: number | null
+): number | null {
+  if (custo === null || precoUnitario <= 0) return null;
+  return arredondarCentavos(((precoUnitario - custo) / precoUnitario) * 100);
+}

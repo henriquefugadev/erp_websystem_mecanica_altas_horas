@@ -3,13 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSessaoAtual } from "@/lib/supabase/sessao";
-import { clienteSchema, type ClienteInput } from "@/lib/validators/cliente.schema";
+import {
+  clienteSchema,
+  clienteRapidoSchema,
+  type ClienteInput,
+} from "@/lib/validators/cliente.schema";
+import { veiculoSchema } from "@/lib/validators/veiculo.schema";
 import {
   atualizarCliente,
+  buscarClientesEVeiculos,
   criarCliente,
+  criarClienteRapido,
   listarClientes,
   softDeleteCliente,
 } from "@/modules/crm/data/cliente.repository";
+import { criarVeiculo } from "@/modules/crm/data/veiculo.repository";
 
 export type ActionResult<T> =
   | { ok: true; data: T }
@@ -30,15 +38,19 @@ export interface ClienteOpcaoBusca {
 
 const LIMITE_RESULTADOS_BUSCA = 20;
 
-// Alimenta o combobox de cliente (ex.: Nova OS, orçamento) sob demanda, em vez
-// de carregar todos os clientes+veículos de uma vez — busca tolerante a
-// acento via buscar_clientes() (0001_init.sql) e busca os veículos só dos
-// clientes encontrados.
+// Alimenta o combobox de cliente (ex.: Nova OS, orçamento, entrada) sob
+// demanda, em vez de carregar todos os clientes+veículos de uma vez — busca
+// tolerante a acento e que casa também por placa/modelo do veículo
+// (buscar_clientes_veiculos, 0012), depois traz os veículos só dos clientes
+// encontrados.
 export async function buscarClientesComVeiculosAction(
   termo: string
 ): Promise<ClienteOpcaoBusca[]> {
   const supabase = await createClient();
-  const clientes = await listarClientes(supabase, termo);
+  const clientes =
+    termo.trim() === ""
+      ? await listarClientes(supabase)
+      : await buscarClientesEVeiculos(supabase, termo);
   const encontrados = clientes.slice(0, LIMITE_RESULTADOS_BUSCA);
 
   if (encontrados.length === 0) return [];
@@ -61,6 +73,63 @@ export async function buscarClientesComVeiculosAction(
       .filter((v) => v.cliente_id === c.id)
       .map((v) => ({ id: v.id, placa: v.placa, modelo: v.modelo, marca: v.marca })),
   }));
+}
+
+// Cadastro relâmpago da recepção: cria cliente (só nome+telefone) e o veículo
+// (placa+modelo) numa tacada e já devolve no formato do combobox, pronto para
+// selecionar. Se o veículo falhar (ex.: placa duplicada), o erro é reportado —
+// o cliente pode ter sido criado e fica disponível para reuso na busca.
+export async function criarClienteComVeiculoAction(
+  clienteEntrada: unknown,
+  veiculoEntrada: unknown
+): Promise<ActionResult<ClienteOpcaoBusca>> {
+  const sessao = await getSessaoAtual();
+  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+
+  const clienteParsed = clienteRapidoSchema.safeParse(clienteEntrada);
+  if (!clienteParsed.success) {
+    return { ok: false, erro: clienteParsed.error.issues[0]?.message ?? "Dados inválidos" };
+  }
+  const veiculoParsed = veiculoSchema.safeParse(veiculoEntrada);
+  if (!veiculoParsed.success) {
+    return { ok: false, erro: veiculoParsed.error.issues[0]?.message ?? "Dados inválidos" };
+  }
+
+  const supabase = await createClient();
+  try {
+    const cliente = await criarClienteRapido(
+      supabase,
+      sessao.workshopId,
+      sessao.usuarioId,
+      clienteParsed.data
+    );
+    const veiculo = await criarVeiculo(
+      supabase,
+      sessao.workshopId,
+      cliente.id,
+      veiculoParsed.data
+    );
+
+    revalidatePath("/clientes");
+    revalidatePath("/patio");
+    return {
+      ok: true,
+      data: {
+        id: cliente.id,
+        nome: cliente.nome,
+        veiculo: [
+          {
+            id: veiculo.id,
+            placa: veiculo.placa,
+            modelo: veiculo.modelo,
+            marca: veiculo.marca,
+          },
+        ],
+      },
+    };
+  } catch (e) {
+    return { ok: false, erro: mensagemDeErro(e) };
+  }
 }
 
 export async function criarClienteAction(
@@ -130,6 +199,11 @@ export async function excluirClienteAction(
 
 function mensagemDeErro(e: unknown): string {
   if (e && typeof e === "object" && "code" in e && e.code === "23505") {
+    const detalhe =
+      "message" in e && typeof e.message === "string" ? e.message.toLowerCase() : "";
+    if (detalhe.includes("placa")) {
+      return "Já existe um veículo com essa placa nesta oficina.";
+    }
     return "Já existe um cliente com esse documento nesta oficina.";
   }
   return "Não foi possível salvar. Tente novamente.";

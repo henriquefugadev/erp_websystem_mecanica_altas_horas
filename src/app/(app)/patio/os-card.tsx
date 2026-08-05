@@ -11,9 +11,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatarPlaca } from "@/lib/format";
-import { GALPOES, type Galpao, type OrdemComRelacoes } from "@/modules/patio/domain/types";
+import {
+  GALPOES,
+  MOTIVO_PARADA_LABEL,
+  type Galpao,
+  type OrdemComRelacoes,
+} from "@/modules/patio/domain/types";
 import { statusPagamento, type NivelAtencao } from "@/modules/patio/domain/status";
 import { ConcluirOsDialog } from "./concluir-os-dialog";
+import { DiagnosticoDialog } from "./diagnostico-dialog";
 import { UsarPecaDialog, type PecaOpcao } from "./usar-peca-dialog";
 
 export function OsCard({
@@ -21,6 +27,7 @@ export function OsCard({
   nivel,
   categoriasReceita,
   pecas,
+  diagnosticoCount,
   onIniciar,
   onVoltar,
   onPausar,
@@ -32,6 +39,7 @@ export function OsCard({
   nivel: NivelAtencao;
   categoriasReceita: { id: string; nome: string }[];
   pecas: PecaOpcao[];
+  diagnosticoCount: number;
   onIniciar: () => void;
   onVoltar: () => void;
   onPausar: () => void;
@@ -41,6 +49,10 @@ export function OsCard({
 }) {
   const pagamento = statusPagamento(ordem.conta_financeira);
   const mostraGalpao = ordem.status === "em_execucao" || ordem.status === "parado";
+  const podeDiagnosticar =
+    ordem.status === "aguardando" ||
+    ordem.status === "em_execucao" ||
+    ordem.status === "parado";
 
   return (
     <div
@@ -77,7 +89,31 @@ export function OsCard({
         </p>
       )}
 
-      <p className="line-clamp-2 text-xs">{ordem.queixa}</p>
+      {ordem.queixa ? (
+        <p className="line-clamp-2 text-xs">{ordem.queixa}</p>
+      ) : (
+        <div className="flex items-center gap-1.5">
+          <Badge variant="outline" className="border-action/40 bg-action/10 text-foreground">
+            Avaliar
+          </Badge>
+          <span className="text-xs text-muted-foreground">Cliente não descreveu</span>
+        </div>
+      )}
+
+      {(diagnosticoCount > 0 || (ordem.status === "parado" && ordem.motivo_parada)) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {diagnosticoCount > 0 && (
+            <Badge variant="outline" className="text-muted-foreground">
+              Diagnóstico: {diagnosticoCount} {diagnosticoCount === 1 ? "item" : "itens"}
+            </Badge>
+          )}
+          {ordem.status === "parado" && ordem.motivo_parada && (
+            <Badge variant="outline" className="border-alert/30 bg-alert/10 text-alert">
+              {MOTIVO_PARADA_LABEL[ordem.motivo_parada]}
+            </Badge>
+          )}
+        </div>
+      )}
 
       {(nivel === "atencao" || pagamento !== "sem_cobranca") && (
         <div className="flex flex-wrap items-center gap-1.5">
@@ -125,6 +161,14 @@ export function OsCard({
       )}
 
       <div className="flex flex-wrap gap-2">
+        {podeDiagnosticar && (
+          <DiagnosticoDialog
+            ordemId={ordem.id}
+            numero={ordem.numero}
+            status={ordem.status}
+            pecas={pecas}
+          />
+        )}
         {ordem.status === "aguardando" && (
           <>
             <Button

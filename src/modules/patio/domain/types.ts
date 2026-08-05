@@ -1,7 +1,14 @@
-import type { Database, StatusOS } from "@/lib/supabase/database.types";
+import type { Database, StatusOS, MotivoParada } from "@/lib/supabase/database.types";
 
 export type OrdemServico = Database["public"]["Tables"]["ordem_servico"]["Row"];
-export type { StatusOS };
+export type { StatusOS, MotivoParada };
+
+export const MOTIVO_PARADA_LABEL: Record<MotivoParada, string> = {
+  aguardando_peca: "Aguardando peça",
+  aguardando_aprovacao: "Aguardando aprovação",
+  aguardando_cliente: "Aguardando cliente",
+  outro: "Parado",
+};
 
 export const GALPOES = [1, 2, 3] as const;
 export type Galpao = (typeof GALPOES)[number];

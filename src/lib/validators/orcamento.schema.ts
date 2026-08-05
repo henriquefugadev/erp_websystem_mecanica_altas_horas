@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const itemOrcamentoSchema = z.object({
   tipo: z.enum(["peca", "servico"]),
+  pecaId: z.string().trim().optional().or(z.literal("")),
   descricao: z.string().trim().min(1, "Descreva o item"),
   quantidade: z
     .union([z.literal(""), z.coerce.number({ error: "Quantidade inválida" })])
