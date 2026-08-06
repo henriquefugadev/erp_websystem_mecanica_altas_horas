@@ -4,6 +4,7 @@ import {
   DollarSign,
   LayoutDashboard,
   LayoutGrid,
+  ListChecks,
   Receipt,
   Settings,
   ShoppingCart,
@@ -29,6 +30,7 @@ export interface NavGroup {
 export const NAV_GROUPS: NavGroup[] = [
   {
     items: [
+      { href: "/painel", label: "Painel", icon: ListChecks },
       { href: "/financeiro", label: "Dashboard", icon: LayoutDashboard },
       { href: "/clientes", label: "Clientes", icon: Users },
       { href: "/orcamentos", label: "Orçamentos", icon: ClipboardList },

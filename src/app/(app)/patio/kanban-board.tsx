@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
 import type { DragEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { LogIn } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { LogIn, RefreshCw } from "lucide-react";
 import {
   cancelarOrdemAction,
   iniciarOrdemAction,
@@ -45,24 +43,6 @@ export function KanbanBoard({
   diagnosticoPorOs: Record<string, number>;
 }) {
   const router = useRouter();
-
-  // Realtime: qualquer mudança em ordem_servico (deste tenant, via RLS)
-  // atualiza o quadro sozinho — sem Michele precisar dar refresh na página.
-  useEffect(() => {
-    const supabase = createClient();
-    const channel = supabase
-      .channel("patio-ordem-servico")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "ordem_servico" },
-        () => router.refresh()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [router]);
 
   const agora = new Date();
   // 'em_execucao' e 'parado' ocupam vaga física do mesmo jeito — soma os dois
@@ -155,6 +135,9 @@ export function KanbanBoard({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="font-heading text-2xl">Pátio</h1>
         <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="icon" aria-label="Atualizar" onClick={() => router.refresh()}>
+            <RefreshCw className="size-4" />
+          </Button>
           <Button variant="outline" render={<Link href="/patio/entrada" />}>
             <LogIn className="size-4" />
             Entrada de veículo
