@@ -38,6 +38,7 @@ export function KanbanBoard({
   diagnosticoPorOs,
   conclusaoPorOs,
   condicoesPagamento,
+  markup,
 }: {
   ordens: OrdemComRelacoes[];
   categoriasReceita: { id: string; nome: string }[];
@@ -46,6 +47,7 @@ export function KanbanBoard({
   diagnosticoPorOs: Record<string, number>;
   conclusaoPorOs: Record<string, ValoresConclusao>;
   condicoesPagamento: string | null;
+  markup: number;
 }) {
   const router = useRouter();
 
@@ -205,6 +207,7 @@ export function KanbanBoard({
                     diagnosticoCount={diagnosticoPorOs[ordem.id] ?? 0}
                     valoresConclusao={conclusaoPorOs[ordem.id]}
                     condicoesPagamento={condicoesPagamento}
+                    markup={markup}
                     onIniciar={() => void iniciar(ordem.id)}
                     onVoltar={() => void voltar(ordem.id)}
                     onPausar={() => void pausar(ordem.id)}

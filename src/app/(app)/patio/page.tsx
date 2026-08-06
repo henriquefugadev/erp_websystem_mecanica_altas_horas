@@ -35,6 +35,7 @@ export default async function PatioPage() {
       diagnosticoPorOs={diagnosticoPorOs}
       conclusaoPorOs={conclusaoPorOs}
       condicoesPagamento={workshop?.condicoes_pagamento_padrao ?? null}
+      markup={workshop?.markup_peca_percentual ?? 30}
     />
   );
 }

@@ -20,7 +20,7 @@ import {
 import { statusPagamento, type NivelAtencao } from "@/modules/patio/domain/status";
 import type { ValoresConclusao } from "@/modules/patio/data/ordem-servico.repository";
 import { ConcluirOsDialog } from "./concluir-os-dialog";
-import { DiagnosticoDialog } from "./diagnostico-dialog";
+import { OrcamentoDialog } from "./orcamento-dialog";
 import { AvisarClienteButton } from "./avisar-cliente-button";
 import { UsarPecaDialog, type PecaOpcao } from "./usar-peca-dialog";
 
@@ -32,6 +32,7 @@ export function OsCard({
   diagnosticoCount,
   valoresConclusao,
   condicoesPagamento,
+  markup,
   onIniciar,
   onVoltar,
   onPausar,
@@ -46,6 +47,7 @@ export function OsCard({
   diagnosticoCount: number;
   valoresConclusao?: ValoresConclusao;
   condicoesPagamento: string | null;
+  markup: number;
   onIniciar: () => void;
   onVoltar: () => void;
   onPausar: () => void;
@@ -55,7 +57,7 @@ export function OsCard({
 }) {
   const pagamento = statusPagamento(ordem.conta_financeira);
   const mostraGalpao = ordem.status === "em_execucao" || ordem.status === "parado";
-  const podeDiagnosticar =
+  const podeOrcar =
     ordem.status === "aguardando" ||
     ordem.status === "em_execucao" ||
     ordem.status === "parado";
@@ -110,7 +112,7 @@ export function OsCard({
         <div className="flex flex-wrap items-center gap-1.5">
           {diagnosticoCount > 0 && (
             <Badge variant="outline" className="text-muted-foreground">
-              Diagnóstico: {diagnosticoCount} {diagnosticoCount === 1 ? "item" : "itens"}
+              Orçamento: {diagnosticoCount} {diagnosticoCount === 1 ? "item" : "itens"}
             </Badge>
           )}
           {ordem.status === "parado" && ordem.motivo_parada && (
@@ -167,12 +169,13 @@ export function OsCard({
       )}
 
       <div className="flex flex-wrap gap-2">
-        {podeDiagnosticar && (
-          <DiagnosticoDialog
+        {podeOrcar && (
+          <OrcamentoDialog
             ordemId={ordem.id}
             numero={ordem.numero}
             status={ordem.status}
             pecas={pecas}
+            markup={markup}
           />
         )}
         {ordem.status === "aguardando" && (

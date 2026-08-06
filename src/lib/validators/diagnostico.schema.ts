@@ -1,12 +1,25 @@
 import { z } from "zod";
 
-// Diagnóstico do mecânico = rascunho do orçamento (Fase 2). O mecânico só
-// preenche o que enxerga na oficina: tipo, descrição e quantidade — sem preço,
-// que ele não sabe (isso entra na fase de cotação).
-//
-// preço/desconto/custo/fornecedor viajam junto SOMENTE para itens que já
-// existiam, para que reeditar o diagnóstico não apague uma cotação já feita.
-// Itens novos nascem sem esses campos.
+// Rascunho de orçamento vinculado à OS — editado no popup "Orçamento" do pátio
+// (Fase 2). A Michele monta aqui a lista completa: tipo, descrição, quantidade,
+// preço e desconto. O custo cotado é opcional (serve à margem e à compra por
+// fornecedor). Os números chegam do formulário como string e são coeridos aqui;
+// campo vazio vira 0 (ou null, no custo). O nome "diagnostico" é histórico — a
+// mesma lista nasce aqui e vive até a compra, sem redigitar.
+
+// Dinheiro obrigatório do form: "" (ou ausente) vira 0.
+const dinheiro = z
+  .union([z.literal(""), z.coerce.number({ error: "Valor inválido" })])
+  .optional()
+  .transform((v) => (v === "" || v === undefined ? 0 : v));
+
+// Custo é opcional de verdade: "" (ou ausente) vira null, não 0 — para
+// distinguir "sem cotação" de "custo zero" na margem e na fase de compra.
+const custoOpcional = z
+  .union([z.literal(""), z.coerce.number({ error: "Custo inválido" })])
+  .nullish()
+  .transform((v) => (v === "" || v == null ? null : v));
+
 export const itemDiagnosticoSchema = z.object({
   tipo: z.enum(["peca", "servico"]),
   descricao: z.string().trim().min(1, "Descreva o item"),
@@ -15,9 +28,9 @@ export const itemDiagnosticoSchema = z.object({
     .refine((v): v is number => v !== "" && v > 0, "Quantidade deve ser maior que zero"),
   pecaId: z.string().trim().optional().or(z.literal("")),
   fornecedorId: z.string().trim().optional().or(z.literal("")),
-  precoUnitario: z.number().optional(),
-  desconto: z.number().optional(),
-  custoCotado: z.number().nullish(),
+  precoUnitario: dinheiro,
+  desconto: dinheiro,
+  custoCotado: custoOpcional,
 });
 
 export const diagnosticoSchema = z.object({
