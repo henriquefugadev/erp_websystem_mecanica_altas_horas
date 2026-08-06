@@ -4,7 +4,6 @@ import {
   DollarSign,
   LayoutDashboard,
   LayoutGrid,
-  ListChecks,
   Receipt,
   Settings,
   ShoppingCart,
@@ -23,14 +22,17 @@ export interface NavItem {
 }
 
 export interface NavGroup {
+  /** Identificador estável do grupo — usado como chave para salvar a ordem
+   *  personalizada dos botões. Não muda mesmo que a posição do grupo mude. */
+  id: string;
   label?: string;
   items: NavItem[];
 }
 
 export const NAV_GROUPS: NavGroup[] = [
   {
+    id: "principal",
     items: [
-      { href: "/painel", label: "Painel", icon: ListChecks },
       { href: "/financeiro", label: "Dashboard", icon: LayoutDashboard },
       { href: "/clientes", label: "Clientes", icon: Users },
       { href: "/orcamentos", label: "Orçamentos", icon: ClipboardList },
@@ -41,6 +43,7 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    id: "compras",
     label: "Compras",
     items: [
       { href: "/cotacoes", label: "Cotações", icon: DollarSign },
@@ -50,6 +53,7 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    id: "sistema",
     label: "Sistema",
     items: [
       { href: "/configuracoes", label: "Configurações", icon: Settings, adminOnly: true },

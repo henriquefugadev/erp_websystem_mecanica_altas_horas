@@ -232,7 +232,6 @@ export async function avisarClienteAction(id: string): Promise<ActionResult<null
   try {
     await marcarClienteAvisado(supabase, id);
     revalidatePath("/patio");
-    revalidatePath("/painel");
     return { ok: true, data: null };
   } catch (e) {
     return { ok: false, erro: mensagemDeErro(e, "Não foi possível marcar como avisado.") };
