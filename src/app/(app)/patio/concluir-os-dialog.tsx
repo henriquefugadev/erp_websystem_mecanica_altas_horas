@@ -37,21 +37,49 @@ function categoriaSugerida(categoriasReceita: { id: string; nome: string }[]): s
   return maoDeObra?.id ?? categoriasReceita[0]?.id ?? "";
 }
 
-function valoresIniciais(categoriasReceita: { id: string; nome: string }[]): ConcluirFormValues {
-  return {
-    vencimento: hojeSaoPaulo(),
-    itens: [{ categoriaId: categoriaSugerida(categoriasReceita), valor: "" }],
-  };
+function categoriaPeca(categoriasReceita: { id: string; nome: string }[], fallback: string): string {
+  return categoriasReceita.find((c) => /pe[çc]a/i.test(c.nome))?.id ?? fallback;
+}
+
+export interface ValoresConclusao {
+  pecas: number;
+  servicos: number;
+}
+
+// Pré-preenche a cobrança a partir do orçamento aprovado: serviços na categoria
+// de mão de obra, peças na categoria de peças. Sem orçamento (ou tudo zero),
+// abre com uma linha em branco como antes.
+function valoresIniciais(
+  categoriasReceita: { id: string; nome: string }[],
+  preenchidos?: ValoresConclusao
+): ConcluirFormValues {
+  const catServico = categoriaSugerida(categoriasReceita);
+  const catPeca = categoriaPeca(categoriasReceita, catServico);
+
+  const itens: ConcluirFormValues["itens"] = [];
+  if (preenchidos) {
+    if (preenchidos.servicos > 0) {
+      itens.push({ categoriaId: catServico, valor: String(preenchidos.servicos) });
+    }
+    if (preenchidos.pecas > 0) {
+      itens.push({ categoriaId: catPeca, valor: String(preenchidos.pecas) });
+    }
+  }
+  if (itens.length === 0) itens.push({ categoriaId: catServico, valor: "" });
+
+  return { vencimento: hojeSaoPaulo(), itens };
 }
 
 export function ConcluirOsDialog({
   ordemId,
   numero,
   categoriasReceita,
+  valoresPreenchidos,
 }: {
   ordemId: string;
   numero: number;
   categoriasReceita: { id: string; nome: string }[];
+  valoresPreenchidos?: ValoresConclusao;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -60,7 +88,7 @@ export function ConcluirOsDialog({
 
   const form = useForm<ConcluirFormValues, unknown, ConcluirFormOutput>({
     resolver: zodResolver(concluirOrdemSchema),
-    defaultValues: valoresIniciais(categoriasReceita),
+    defaultValues: valoresIniciais(categoriasReceita, valoresPreenchidos),
   });
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "itens" });
 
@@ -79,7 +107,7 @@ export function ConcluirOsDialog({
           : "OS concluída."
       );
       setOpen(false);
-      form.reset(valoresIniciais(categoriasReceita));
+      form.reset(valoresIniciais(categoriasReceita, valoresPreenchidos));
       router.refresh();
     } finally {
       setEnviando(false);
@@ -93,7 +121,7 @@ export function ConcluirOsDialog({
         setOpen(v);
         if (v) {
           setErro(null);
-          form.reset(valoresIniciais(categoriasReceita));
+          form.reset(valoresIniciais(categoriasReceita, valoresPreenchidos));
         }
       }}
     >

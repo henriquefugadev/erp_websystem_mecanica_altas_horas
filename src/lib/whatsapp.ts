@@ -24,6 +24,26 @@ export function descreverVeiculo(veiculo: VeiculoResumo): string {
   return `${nome} — ${formatarPlaca(veiculo.placa)}`;
 }
 
+// Aviso ao cliente de que o carro está pronto para retirada.
+export function montarTextoOsPronta(dados: {
+  nome: string | null;
+  veiculo: VeiculoResumo | null;
+  total: number;
+  condicoes: string | null;
+}): string {
+  const partes = [
+    `Olá${dados.nome ? `, ${dados.nome}` : ""}! Seu veículo está pronto para retirada. ✅`,
+  ];
+  if (dados.veiculo) partes.push(`Veículo: ${descreverVeiculo(dados.veiculo)}`);
+  if (dados.total > 0) {
+    partes.push(
+      `Valor: ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(dados.total)}`
+    );
+  }
+  if (dados.condicoes) partes.push(`Pagamento: ${dados.condicoes}`);
+  return partes.join("\n");
+}
+
 // Mensagem para pedir cotação de peças ao fornecedor pelo WhatsApp.
 export function montarTextoCotacao(
   veiculo: VeiculoResumo,

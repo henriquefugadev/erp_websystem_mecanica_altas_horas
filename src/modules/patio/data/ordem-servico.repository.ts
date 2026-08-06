@@ -2,11 +2,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { OrdemServicoInput } from "@/lib/validators/ordem-servico.schema";
 import type { Galpao, MotivoParada } from "../domain/types";
+import { calcularConclusaoDoOrcamento } from "@/modules/orcamento/domain/calculo";
 
 type Client = SupabaseClient<Database>;
 
+export interface ValoresConclusao {
+  pecas: number;
+  servicos: number;
+}
+
 const SELECT_QUADRO =
-  "*, cliente(nome), veiculo(placa, modelo, marca), conta_financeira(status), funcionario(nome)";
+  "*, cliente(nome, telefone), veiculo(placa, modelo, marca), conta_financeira(status), funcionario(nome)";
 
 export async function listarOrdensDoQuadro(supabase: Client) {
   // O quadro é operacional, não um histórico: OS concluídas somem depois de
@@ -50,6 +56,63 @@ export async function contarDiagnosticoPorOs(
     mapa[row.ordem_servico_id] = (mapa[row.ordem_servico_id] ?? 0) + total;
   }
   return mapa;
+}
+
+// Valor a cobrar sugerido por OS, somando os itens APROVADOS do orçamento
+// vinculado, separados por tipo (peças e serviços) — pré-preenche a conclusão
+// e serve de total no aviso "carro pronto". Uma query para o quadro inteiro.
+export async function valoresConclusaoPorOs(
+  supabase: Client
+): Promise<Record<string, ValoresConclusao>> {
+  type Row = {
+    tipo: "peca" | "servico";
+    quantidade: number;
+    preco_unitario: number;
+    desconto: number;
+    orcamento: { ordem_servico_id: string | null; status: string; deleted_at: string | null } | null;
+  };
+
+  const { data, error } = await supabase
+    .from("orcamento_item")
+    .select("tipo, quantidade, preco_unitario, desconto, orcamento!inner(ordem_servico_id, status, deleted_at)")
+    .eq("aprovado", true)
+    .in("orcamento.status", ["aprovado", "aprovado_parcial"])
+    .not("orcamento.ordem_servico_id", "is", null)
+    .is("orcamento.deleted_at", null)
+    .overrideTypes<Row[], { merge: false }>();
+
+  if (error) throw error;
+
+  const porOs = new Map<string, Row[]>();
+  for (const item of data) {
+    const ordemId = item.orcamento?.ordem_servico_id;
+    if (!ordemId) continue;
+    const lista = porOs.get(ordemId) ?? [];
+    lista.push(item);
+    porOs.set(ordemId, lista);
+  }
+
+  const resultado: Record<string, ValoresConclusao> = {};
+  for (const [ordemId, itens] of porOs) {
+    resultado[ordemId] = calcularConclusaoDoOrcamento(
+      itens.map((i) => ({
+        tipo: i.tipo,
+        quantidade: i.quantidade,
+        precoUnitario: i.preco_unitario,
+        desconto: i.desconto,
+      }))
+    );
+  }
+  return resultado;
+}
+
+export async function marcarClienteAvisado(supabase: Client, id: string) {
+  const { error } = await supabase
+    .from("ordem_servico")
+    .update({ cliente_avisado_em: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) throw error;
 }
 
 export async function buscarOrdemPorId(supabase: Client, id: string) {

@@ -434,6 +434,7 @@ export interface Database {
           data_inicio: string | null;
           data_pausa: string | null;
           data_conclusao: string | null;
+          cliente_avisado_em: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -458,6 +459,7 @@ export interface Database {
             data_inicio: string | null;
             data_pausa: string | null;
             data_conclusao: string | null;
+            cliente_avisado_em: string | null;
             deleted_at: string | null;
           }
         >;

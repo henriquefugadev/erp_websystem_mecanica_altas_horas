@@ -260,6 +260,41 @@ async function pedidosAtrasados(supabase: Client): Promise<BlocoPainel | null> {
   };
 }
 
+// 7) Prontos, cliente não avisado: OS concluída sem cliente_avisado_em.
+async function prontosNaoAvisados(supabase: Client): Promise<BlocoPainel | null> {
+  type Row = {
+    id: string;
+    numero: number;
+    cliente: { nome: string } | null;
+    veiculo: { placa: string; modelo: string; marca: string | null } | null;
+  };
+  const { data, count, error } = await supabase
+    .from("ordem_servico")
+    .select("id, numero, cliente(nome), veiculo(placa, modelo, marca)", { count: "exact" })
+    .eq("status", "concluido")
+    .is("cliente_avisado_em", null)
+    .is("deleted_at", null)
+    .order("data_conclusao", { ascending: true })
+    .limit(AMOSTRA)
+    .overrideTypes<Row[], { merge: false }>();
+
+  if (error) throw error;
+  if (!count) return null;
+
+  return {
+    chave: "nao-avisado",
+    titulo: "Prontos — avisar cliente",
+    acao: "Avisar",
+    total: count,
+    linhas: data.map((o) => ({
+      chave: o.id,
+      primario: `OS #${o.numero} — ${labelVeiculo(o.veiculo)}`,
+      secundario: o.cliente?.nome ?? null,
+      href: "/patio",
+    })),
+  };
+}
+
 // 8) Financeiro: parcelas em aberto vencidas ou vencendo nos próximos 3 dias.
 async function financeiroVencendo(supabase: Client): Promise<BlocoPainel | null> {
   type Row = {
@@ -298,13 +333,14 @@ async function financeiroVencendo(supabase: Client): Promise<BlocoPainel | null>
 
 // Monta o painel inteiro em paralelo, já sem os blocos vazios.
 export async function carregarPainel(supabase: Client): Promise<BlocoPainel[]> {
-  const [semDiagnostico, rascunhos, semResposta, semCompra, atrasados, financeiro] =
+  const [semDiagnostico, rascunhos, semResposta, semCompra, atrasados, naoAvisados, financeiro] =
     await Promise.all([
       osSemDiagnostico(supabase),
       blocosRascunho(supabase),
       orcamentosSemResposta(supabase),
       aprovadosSemCompra(supabase),
       pedidosAtrasados(supabase),
+      prontosNaoAvisados(supabase),
       financeiroVencendo(supabase),
     ]);
 
@@ -315,6 +351,7 @@ export async function carregarPainel(supabase: Client): Promise<BlocoPainel[]> {
     semResposta,
     semCompra,
     atrasados,
+    naoAvisados,
     financeiro,
   ].filter((b): b is BlocoPainel => b !== null);
 }

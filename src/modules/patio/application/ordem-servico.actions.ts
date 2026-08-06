@@ -15,6 +15,7 @@ import {
   criarOrdem,
   iniciarOrdem,
   listarOrdensDoQuadro,
+  marcarClienteAvisado,
   moverGalpao,
   pausarOrdem,
   retomarOrdem,
@@ -220,6 +221,21 @@ export async function concluirOrdemAction(
     return { ok: true, data: { contaIds } };
   } catch (e) {
     return { ok: false, erro: mensagemDeErro(e, "Não foi possível concluir a OS. Tente novamente.") };
+  }
+}
+
+export async function avisarClienteAction(id: string): Promise<ActionResult<null>> {
+  const sessao = await getSessaoAtual();
+  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+
+  const supabase = await createClient();
+  try {
+    await marcarClienteAvisado(supabase, id);
+    revalidatePath("/patio");
+    revalidatePath("/painel");
+    return { ok: true, data: null };
+  } catch (e) {
+    return { ok: false, erro: mensagemDeErro(e, "Não foi possível marcar como avisado.") };
   }
 }
 

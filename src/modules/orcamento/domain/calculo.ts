@@ -28,6 +28,30 @@ export function aplicarMarkup(custo: number, markupPercentual: number): number {
   return arredondarCentavos(custo * (1 + markupPercentual / 100));
 }
 
+// Soma os itens (já aprovados) por tipo, para pré-preencher a cobrança na
+// conclusão da OS: peças numa categoria de receita, serviços em outra. Cada
+// subtotal segue a mesma regra de arredondamento do resto do orçamento.
+export interface ItemConclusao {
+  tipo: "peca" | "servico";
+  quantidade: number;
+  precoUnitario: number;
+  desconto?: number;
+}
+
+export function calcularConclusaoDoOrcamento(itens: ItemConclusao[]): {
+  pecas: number;
+  servicos: number;
+} {
+  let pecas = 0;
+  let servicos = 0;
+  for (const item of itens) {
+    const subtotal = calcularSubtotalItem(item);
+    if (item.tipo === "peca") pecas += subtotal;
+    else servicos += subtotal;
+  }
+  return { pecas: arredondarCentavos(pecas), servicos: arredondarCentavos(servicos) };
+}
+
 // Margem sobre o preço de venda: (preço − custo) / preço × 100. Visão interna
 // (nunca vai pro cliente), ajuda a Michele a ver quanto sobra em cada peça.
 // Retorna null quando não dá pra calcular (sem preço ou sem custo cotado).

@@ -18,8 +18,10 @@ import {
   type OrdemComRelacoes,
 } from "@/modules/patio/domain/types";
 import { statusPagamento, type NivelAtencao } from "@/modules/patio/domain/status";
+import type { ValoresConclusao } from "@/modules/patio/data/ordem-servico.repository";
 import { ConcluirOsDialog } from "./concluir-os-dialog";
 import { DiagnosticoDialog } from "./diagnostico-dialog";
+import { AvisarClienteButton } from "./avisar-cliente-button";
 import { UsarPecaDialog, type PecaOpcao } from "./usar-peca-dialog";
 
 export function OsCard({
@@ -28,6 +30,8 @@ export function OsCard({
   categoriasReceita,
   pecas,
   diagnosticoCount,
+  valoresConclusao,
+  condicoesPagamento,
   onIniciar,
   onVoltar,
   onPausar,
@@ -40,6 +44,8 @@ export function OsCard({
   categoriasReceita: { id: string; nome: string }[];
   pecas: PecaOpcao[];
   diagnosticoCount: number;
+  valoresConclusao?: ValoresConclusao;
+  condicoesPagamento: string | null;
   onIniciar: () => void;
   onVoltar: () => void;
   onPausar: () => void;
@@ -196,8 +202,20 @@ export function OsCard({
               ordemId={ordem.id}
               numero={ordem.numero}
               categoriasReceita={categoriasReceita}
+              valoresPreenchidos={valoresConclusao}
             />
           </>
+        )}
+        {ordem.status === "concluido" && (
+          <AvisarClienteButton
+            ordemId={ordem.id}
+            nome={ordem.cliente?.nome ?? null}
+            telefone={ordem.cliente?.telefone ?? null}
+            veiculo={ordem.veiculo}
+            total={(valoresConclusao?.pecas ?? 0) + (valoresConclusao?.servicos ?? 0)}
+            condicoes={condicoesPagamento}
+            jaAvisado={ordem.cliente_avisado_em !== null}
+          />
         )}
         {ordem.status === "parado" && (
           <>

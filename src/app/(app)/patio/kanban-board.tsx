@@ -21,6 +21,7 @@ import {
   type Galpao,
   type OrdemComRelacoes,
 } from "@/modules/patio/domain/types";
+import type { ValoresConclusao } from "@/modules/patio/data/ordem-servico.repository";
 import type { StatusOS } from "@/lib/supabase/database.types";
 import { Button } from "@/components/ui/button";
 import { OsCard } from "./os-card";
@@ -35,12 +36,16 @@ export function KanbanBoard({
   funcionarios,
   pecas,
   diagnosticoPorOs,
+  conclusaoPorOs,
+  condicoesPagamento,
 }: {
   ordens: OrdemComRelacoes[];
   categoriasReceita: { id: string; nome: string }[];
   funcionarios: FuncionarioOpcao[];
   pecas: PecaOpcao[];
   diagnosticoPorOs: Record<string, number>;
+  conclusaoPorOs: Record<string, ValoresConclusao>;
+  condicoesPagamento: string | null;
 }) {
   const router = useRouter();
 
@@ -198,6 +203,8 @@ export function KanbanBoard({
                     categoriasReceita={categoriasReceita}
                     pecas={pecas}
                     diagnosticoCount={diagnosticoPorOs[ordem.id] ?? 0}
+                    valoresConclusao={conclusaoPorOs[ordem.id]}
+                    condicoesPagamento={condicoesPagamento}
                     onIniciar={() => void iniciar(ordem.id)}
                     onVoltar={() => void voltar(ordem.id)}
                     onPausar={() => void pausar(ordem.id)}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   aplicarMarkup,
+  calcularConclusaoDoOrcamento,
   calcularMargemPercentual,
   calcularSubtotalItem,
   calcularTotalOrcamento,
@@ -77,5 +78,29 @@ describe("calcularMargemPercentual", () => {
 
   it("margem 100% quando o custo é zero", () => {
     expect(calcularMargemPercentual(200, 0)).toBe(100);
+  });
+});
+
+describe("calcularConclusaoDoOrcamento", () => {
+  it("separa a soma por tipo (peças x serviços)", () => {
+    const r = calcularConclusaoDoOrcamento([
+      { tipo: "peca", quantidade: 2, precoUnitario: 130 },
+      { tipo: "peca", quantidade: 1, precoUnitario: 65 },
+      { tipo: "servico", quantidade: 1, precoUnitario: 200 },
+    ]);
+    expect(r.pecas).toBe(325);
+    expect(r.servicos).toBe(200);
+  });
+
+  it("aplica desconto por item na soma", () => {
+    const r = calcularConclusaoDoOrcamento([
+      { tipo: "servico", quantidade: 1, precoUnitario: 300, desconto: 50 },
+    ]);
+    expect(r.servicos).toBe(250);
+    expect(r.pecas).toBe(0);
+  });
+
+  it("lista vazia zera os dois", () => {
+    expect(calcularConclusaoDoOrcamento([])).toEqual({ pecas: 0, servicos: 0 });
   });
 });
