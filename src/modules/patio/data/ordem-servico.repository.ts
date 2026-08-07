@@ -156,6 +156,59 @@ export async function buscarItensParaConclusao(
   }));
 }
 
+export interface ParcelaReceber {
+  parcelaId: string;
+  contaId: string;
+  descricao: string;
+  saldo: number;
+  vencimento: string;
+}
+
+// Parcelas a receber ainda em aberto das contas geradas na conclusão da OS —
+// alimenta o "Receber pagamento" quando o cliente busca o carro e paga. Só
+// contas do tipo "receber" da OS; o saldo é valor − pago − desconto.
+export async function buscarParcelasReceberDaOs(
+  supabase: Client,
+  ordemId: string
+): Promise<ParcelaReceber[]> {
+  type Row = {
+    id: string;
+    conta_id: string;
+    valor: number;
+    valor_pago: number;
+    desconto: number;
+    vencimento: string;
+    conta_financeira: {
+      descricao: string;
+      tipo: string;
+      ordem_servico_id: string | null;
+      deleted_at: string | null;
+    } | null;
+  };
+
+  const { data, error } = await supabase
+    .from("parcela_financeira")
+    .select(
+      "id, conta_id, valor, valor_pago, desconto, vencimento, conta_financeira!inner(descricao, tipo, ordem_servico_id, deleted_at)"
+    )
+    .eq("conta_financeira.ordem_servico_id", ordemId)
+    .eq("conta_financeira.tipo", "receber")
+    .is("conta_financeira.deleted_at", null)
+    .in("status", ["aberta", "parcial"])
+    .order("vencimento", { ascending: true })
+    .overrideTypes<Row[], { merge: false }>();
+
+  if (error) throw error;
+
+  return data.map((p) => ({
+    parcelaId: p.id,
+    contaId: p.conta_id,
+    descricao: p.conta_financeira?.descricao ?? "Conta",
+    saldo: Math.round((p.valor - p.valor_pago - p.desconto) * 100) / 100,
+    vencimento: p.vencimento,
+  }));
+}
+
 export async function marcarClienteAvisado(supabase: Client, id: string) {
   const { error } = await supabase
     .from("ordem_servico")

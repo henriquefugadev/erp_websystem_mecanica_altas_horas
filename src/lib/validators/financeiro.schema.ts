@@ -73,3 +73,14 @@ export const pagamentoSchema = z.object({
 });
 
 export type PagamentoInput = z.infer<typeof pagamentoSchema>;
+
+// Recebimento em lote ao entregar o carro (Fase 4): a Michele registra que o
+// cliente pagou tudo. O valor vem de cada parcela em aberto da OS — ela só
+// escolhe forma e data. Sem campo de valor: quita o saldo integral.
+export const receberPagamentoSchema = z.object({
+  dataPagamento: z.string().min(1, "Data é obrigatória"),
+  formaPagamento: z.enum(FORMAS_PAGAMENTO),
+  observacoes: z.string().trim().optional().or(z.literal("")),
+});
+
+export type ReceberPagamentoInput = z.infer<typeof receberPagamentoSchema>;

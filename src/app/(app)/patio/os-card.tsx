@@ -22,6 +22,7 @@ import type { ValoresConclusao } from "@/modules/patio/data/ordem-servico.reposi
 import { ConcluirOsDialog } from "./concluir-os-dialog";
 import { OrcamentoDialog } from "./orcamento-dialog";
 import { AvisarClienteButton } from "./avisar-cliente-button";
+import { ReceberPagamentoDialog } from "./receber-pagamento-dialog";
 import { UsarPecaDialog, type PecaOpcao } from "./usar-peca-dialog";
 
 export function OsCard({
@@ -56,6 +57,8 @@ export function OsCard({
   onMoverGalpao: (galpao: Galpao) => void;
 }) {
   const pagamento = statusPagamento(ordem.conta_financeira);
+  const podeReceber =
+    ordem.status === "concluido" && (pagamento === "pendente" || pagamento === "parcial");
   const mostraGalpao = ordem.status === "em_execucao" || ordem.status === "parado";
   const podeOrcar =
     ordem.status === "aguardando" ||
@@ -209,15 +212,20 @@ export function OsCard({
           </>
         )}
         {ordem.status === "concluido" && (
-          <AvisarClienteButton
-            ordemId={ordem.id}
-            nome={ordem.cliente?.nome ?? null}
-            telefone={ordem.cliente?.telefone ?? null}
-            veiculo={ordem.veiculo}
-            total={(valoresConclusao?.pecas ?? 0) + (valoresConclusao?.servicos ?? 0)}
-            condicoes={condicoesPagamento}
-            jaAvisado={ordem.cliente_avisado_em !== null}
-          />
+          <>
+            <AvisarClienteButton
+              ordemId={ordem.id}
+              nome={ordem.cliente?.nome ?? null}
+              telefone={ordem.cliente?.telefone ?? null}
+              veiculo={ordem.veiculo}
+              total={(valoresConclusao?.pecas ?? 0) + (valoresConclusao?.servicos ?? 0)}
+              condicoes={condicoesPagamento}
+              jaAvisado={ordem.cliente_avisado_em !== null}
+            />
+            {podeReceber && (
+              <ReceberPagamentoDialog ordemId={ordem.id} numero={ordem.numero} />
+            )}
+          </>
         )}
         {ordem.status === "parado" && (
           <>

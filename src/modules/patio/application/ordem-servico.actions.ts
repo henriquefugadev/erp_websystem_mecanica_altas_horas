@@ -11,6 +11,7 @@ import {
 import {
   buscarItensParaConclusao,
   buscarOrdemPorId,
+  buscarParcelasReceberDaOs,
   cancelarOrdem,
   concluirOrdem,
   criarOrdem,
@@ -22,7 +23,10 @@ import {
   retomarOrdem,
   voltarParaAguardando,
   type ItemConclusaoRevisao,
+  type ParcelaReceber,
 } from "@/modules/patio/data/ordem-servico.repository";
+import { registrarPagamento } from "@/modules/financeiro/data/pagamento.repository";
+import { receberPagamentoSchema } from "@/lib/validators/financeiro.schema";
 import { galpaoMenosOcupado, transicaoPermitida } from "@/modules/patio/domain/status";
 import { GALPOES, STATUS_OS_LABEL, type Galpao, type MotivoParada } from "@/modules/patio/domain/types";
 import { mensagemDeErro } from "@/modules/financeiro/application/erros";
@@ -197,6 +201,59 @@ export async function buscarItensConclusaoAction(
 ): Promise<ItemConclusaoRevisao[]> {
   const supabase = await createClient();
   return buscarItensParaConclusao(supabase, ordemId);
+}
+
+// Parcelas a receber em aberto da OS — o dialog de "Receber pagamento" mostra
+// o que o cliente ainda deve.
+export async function buscarPagamentoOsAction(ordemId: string): Promise<ParcelaReceber[]> {
+  const supabase = await createClient();
+  return buscarParcelasReceberDaOs(supabase, ordemId);
+}
+
+// Registra o recebimento quando o cliente busca o carro e paga: quita o saldo
+// integral de cada parcela em aberto da OS, com a forma e a data informadas.
+export async function receberPagamentoOsAction(
+  ordemId: string,
+  entrada: unknown
+): Promise<ActionResult<{ pagas: number }>> {
+  const sessao = await getSessaoAtual();
+  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+
+  const parsed = receberPagamentoSchema.safeParse(entrada);
+  if (!parsed.success) {
+    return { ok: false, erro: parsed.error.issues[0]?.message ?? "Dados inválidos" };
+  }
+
+  const supabase = await createClient();
+  try {
+    const parcelas = await buscarParcelasReceberDaOs(supabase, ordemId);
+    const aReceber = parcelas.filter((p) => p.saldo > 0);
+    if (aReceber.length === 0) {
+      return { ok: false, erro: "Não há saldo a receber nesta OS." };
+    }
+
+    // Uma baixa por parcela, cada uma pelo saldo integral. A RPC
+    // registrar_pagamento valida o saldo e recalcula o status da conta.
+    for (const parcela of aReceber) {
+      await registrarPagamento(supabase, parcela.parcelaId, sessao.usuarioId, {
+        valor: parcela.saldo,
+        desconto: 0,
+        dataPagamento: parsed.data.dataPagamento,
+        formaPagamento: parsed.data.formaPagamento,
+        observacoes: parsed.data.observacoes || "",
+      });
+    }
+
+    revalidatePath("/patio");
+    revalidatePath("/financeiro/contas");
+    revalidatePath("/financeiro");
+    return { ok: true, data: { pagas: aReceber.length } };
+  } catch (e) {
+    return {
+      ok: false,
+      erro: mensagemDeErro(e, "Não foi possível registrar o recebimento. Tente novamente."),
+    };
+  }
 }
 
 export async function concluirOrdemAction(
