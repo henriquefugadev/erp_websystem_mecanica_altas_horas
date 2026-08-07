@@ -2,7 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { OrdemServicoInput } from "@/lib/validators/ordem-servico.schema";
 import type { Galpao, MotivoParada } from "../domain/types";
-import { calcularConclusaoDoOrcamento } from "@/modules/orcamento/domain/calculo";
+import {
+  calcularConclusaoDoOrcamento,
+  calcularSubtotalItem,
+} from "@/modules/orcamento/domain/calculo";
 
 type Client = SupabaseClient<Database>;
 
@@ -104,6 +107,53 @@ export async function valoresConclusaoPorOs(
     );
   }
   return resultado;
+}
+
+export interface ItemConclusaoRevisao {
+  descricao: string;
+  tipo: "peca" | "servico";
+  valor: number;
+}
+
+// Itens APROVADOS do orçamento vinculado à OS, linha a linha (descrição + tipo
+// + subtotal) — é o "orçamento que a Michele passou pro cliente" que ela revê
+// antes de concluir. Difere de valoresConclusaoPorOs, que só devolve os totais.
+export async function buscarItensParaConclusao(
+  supabase: Client,
+  ordemId: string
+): Promise<ItemConclusaoRevisao[]> {
+  type Row = {
+    tipo: "peca" | "servico";
+    descricao: string;
+    quantidade: number;
+    preco_unitario: number;
+    desconto: number;
+    orcamento: { ordem_servico_id: string | null; status: string; deleted_at: string | null } | null;
+  };
+
+  const { data, error } = await supabase
+    .from("orcamento_item")
+    .select(
+      "tipo, descricao, quantidade, preco_unitario, desconto, orcamento!inner(ordem_servico_id, status, deleted_at), created_at"
+    )
+    .eq("aprovado", true)
+    .eq("orcamento.ordem_servico_id", ordemId)
+    .in("orcamento.status", ["aprovado", "aprovado_parcial"])
+    .is("orcamento.deleted_at", null)
+    .order("created_at", { ascending: true })
+    .overrideTypes<Row[], { merge: false }>();
+
+  if (error) throw error;
+
+  return data.map((i) => ({
+    descricao: i.descricao,
+    tipo: i.tipo,
+    valor: calcularSubtotalItem({
+      quantidade: i.quantidade,
+      precoUnitario: i.preco_unitario,
+      desconto: i.desconto,
+    }),
+  }));
 }
 
 export async function marcarClienteAvisado(supabase: Client, id: string) {

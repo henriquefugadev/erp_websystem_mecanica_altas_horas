@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  agruparValoresPorCategoria,
   aplicarMarkup,
   calcularConclusaoDoOrcamento,
   calcularMargemPercentual,
@@ -102,5 +103,41 @@ describe("calcularConclusaoDoOrcamento", () => {
 
   it("lista vazia zera os dois", () => {
     expect(calcularConclusaoDoOrcamento([])).toEqual({ pecas: 0, servicos: 0 });
+  });
+});
+
+describe("agruparValoresPorCategoria", () => {
+  it("soma os valores das linhas da mesma categoria", () => {
+    const r = agruparValoresPorCategoria([
+      { categoriaId: "pecas", valor: 130 },
+      { categoriaId: "pecas", valor: 65 },
+      { categoriaId: "mao", valor: 200 },
+    ]);
+    expect(r).toEqual([
+      { categoriaId: "pecas", valor: 195 },
+      { categoriaId: "mao", valor: 200 },
+    ]);
+  });
+
+  it("mantém a ordem da primeira ocorrência de cada categoria", () => {
+    const r = agruparValoresPorCategoria([
+      { categoriaId: "mao", valor: 100 },
+      { categoriaId: "pecas", valor: 50 },
+      { categoriaId: "mao", valor: 20 },
+    ]);
+    expect(r.map((i) => i.categoriaId)).toEqual(["mao", "pecas"]);
+    expect(r[0].valor).toBe(120);
+  });
+
+  it("arredonda o total de cada categoria ao centavo", () => {
+    const r = agruparValoresPorCategoria([
+      { categoriaId: "pecas", valor: 0.1 },
+      { categoriaId: "pecas", valor: 0.2 },
+    ]);
+    expect(r[0].valor).toBe(0.3);
+  });
+
+  it("lista vazia devolve lista vazia", () => {
+    expect(agruparValoresPorCategoria([])).toEqual([]);
   });
 });

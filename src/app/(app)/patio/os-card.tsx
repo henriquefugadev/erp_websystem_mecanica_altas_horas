@@ -205,7 +205,6 @@ export function OsCard({
               ordemId={ordem.id}
               numero={ordem.numero}
               categoriasReceita={categoriasReceita}
-              valoresPreenchidos={valoresConclusao}
             />
           </>
         )}

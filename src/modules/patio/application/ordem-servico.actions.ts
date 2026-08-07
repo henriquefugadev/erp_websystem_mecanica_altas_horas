@@ -9,6 +9,7 @@ import {
   type OrdemServicoInput,
 } from "@/lib/validators/ordem-servico.schema";
 import {
+  buscarItensParaConclusao,
   buscarOrdemPorId,
   cancelarOrdem,
   concluirOrdem,
@@ -20,6 +21,7 @@ import {
   pausarOrdem,
   retomarOrdem,
   voltarParaAguardando,
+  type ItemConclusaoRevisao,
 } from "@/modules/patio/data/ordem-servico.repository";
 import { galpaoMenosOcupado, transicaoPermitida } from "@/modules/patio/domain/status";
 import { GALPOES, STATUS_OS_LABEL, type Galpao, type MotivoParada } from "@/modules/patio/domain/types";
@@ -186,6 +188,15 @@ export async function cancelarOrdemAction(id: string): Promise<ActionResult<null
   } catch (e) {
     return { ok: false, erro: mensagemDeErro(e, "Não foi possível cancelar a OS. Tente novamente.") };
   }
+}
+
+// Carrega o orçamento aprovado da OS (linha a linha) para a Michele revisar
+// antes de concluir. Leitura pura — segue o padrão dos outros loaders de dialog.
+export async function buscarItensConclusaoAction(
+  ordemId: string
+): Promise<ItemConclusaoRevisao[]> {
+  const supabase = await createClient();
+  return buscarItensParaConclusao(supabase, ordemId);
 }
 
 export async function concluirOrdemAction(

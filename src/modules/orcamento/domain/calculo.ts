@@ -52,6 +52,23 @@ export function calcularConclusaoDoOrcamento(itens: ItemConclusao[]): {
   return { pecas: arredondarCentavos(pecas), servicos: arredondarCentavos(servicos) };
 }
 
+// Agrupa linhas de cobrança por categoria, somando os valores — usado ao
+// concluir a OS: a revisão mostra o orçamento item a item, mas o Financeiro
+// gera UMA conta a receber por categoria (ex.: "Peças", "Mão de obra"). Mantém
+// a ordem da primeira ocorrência de cada categoria e arredonda cada total.
+export function agruparValoresPorCategoria(
+  itens: { categoriaId: string; valor: number }[]
+): { categoriaId: string; valor: number }[] {
+  const mapa = new Map<string, number>();
+  for (const item of itens) {
+    mapa.set(item.categoriaId, (mapa.get(item.categoriaId) ?? 0) + item.valor);
+  }
+  return [...mapa.entries()].map(([categoriaId, valor]) => ({
+    categoriaId,
+    valor: arredondarCentavos(valor),
+  }));
+}
+
 // Margem sobre o preço de venda: (preço − custo) / preço × 100. Visão interna
 // (nunca vai pro cliente), ajuda a Michele a ver quanto sobra em cada peça.
 // Retorna null quando não dá pra calcular (sem preço ou sem custo cotado).

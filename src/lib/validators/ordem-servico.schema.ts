@@ -41,3 +41,29 @@ export const concluirOrdemSchema = z
   });
 
 export type ConcluirOrdemInput = z.infer<typeof concluirOrdemSchema>;
+
+// Conclusão com revisão do orçamento (Fase 3): a Michele revê o orçamento
+// aprovado linha a linha antes de fechar. Cada linha carrega a descrição só
+// para conferência — o Financeiro continua agrupando por categoria. `descricao`
+// é opcional (linha adicionada na hora pode ficar sem).
+export const itemRevisaoConclusaoSchema = itemConclusaoSchema.extend({
+  descricao: z.string().trim().optional().or(z.literal("")),
+});
+
+export const revisaoConclusaoSchema = z
+  .object({
+    vencimento: z.string().trim().optional().or(z.literal("")),
+    itens: z.array(itemRevisaoConclusaoSchema).default([]),
+  })
+  .superRefine((dados, ctx) => {
+    if (dados.itens.length > 0 && !dados.vencimento) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["vencimento"],
+        message: "Informe o vencimento para cobrar.",
+      });
+    }
+  });
+
+export type RevisaoConclusaoInput = z.input<typeof revisaoConclusaoSchema>;
+export type RevisaoConclusaoOutput = z.output<typeof revisaoConclusaoSchema>;
