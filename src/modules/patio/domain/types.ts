@@ -16,6 +16,7 @@ export const CAPACIDADE_GALPAO = 10;
 
 export const STATUS_OS_LABEL: Record<StatusOS, string> = {
   aguardando: "Aguardando",
+  aguardando_confirmacao: "Esperando Confirmação do Cliente",
   em_execucao: "Em Execução",
   parado: "Parado",
   concluido: "Concluído",

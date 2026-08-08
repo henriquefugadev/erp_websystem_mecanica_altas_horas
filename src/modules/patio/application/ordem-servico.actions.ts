@@ -15,6 +15,7 @@ import {
   cancelarOrdem,
   concluirOrdem,
   criarOrdem,
+  enviarParaConfirmacao,
   iniciarOrdem,
   listarOrdensDoQuadro,
   marcarClienteAvisado,
@@ -151,6 +152,72 @@ export async function retomarOrdemAction(
     return { ok: true, data: { galpao: (ordem.galpao as Galpao) ?? null } };
   } catch (e) {
     return { ok: false, erro: mensagemDeErro(e, "Não foi possível retomar a OS. Tente novamente.") };
+  }
+}
+
+// Move a OS para "Esperando Confirmação do Cliente" — enviou o orçamento e
+// aguarda o OK. Vem de "aguardando" (antes de começar) ou de "em_execucao"
+// (durante o serviço, quando surge algo a aprovar).
+export async function enviarConfirmacaoAction(id: string): Promise<ActionResult<null>> {
+  const sessao = await getSessaoAtual();
+  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+
+  const supabase = await createClient();
+  try {
+    const ordem = await buscarOrdemPorId(supabase, id);
+    if (!transicaoPermitida(ordem.status, "aguardando_confirmacao")) {
+      return {
+        ok: false,
+        erro: `OS está "${STATUS_OS_LABEL[ordem.status]}", não é possível enviar para confirmação.`,
+      };
+    }
+
+    await enviarParaConfirmacao(supabase, id);
+    revalidatePath("/patio");
+    return { ok: true, data: null };
+  } catch (e) {
+    return {
+      ok: false,
+      erro: mensagemDeErro(e, "Não foi possível enviar para confirmação. Tente novamente."),
+    };
+  }
+}
+
+// Cliente aprovou o orçamento: libera a OS para execução. Se ela já tinha
+// galpão (veio da execução), retoma na mesma baia; senão, atribui o galpão
+// menos ocupado, como um início normal.
+export async function confirmarClienteAction(
+  id: string
+): Promise<ActionResult<{ galpao: Galpao | null }>> {
+  const sessao = await getSessaoAtual();
+  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+
+  const supabase = await createClient();
+  try {
+    const ordem = await buscarOrdemPorId(supabase, id);
+    if (!transicaoPermitida(ordem.status, "em_execucao")) {
+      return {
+        ok: false,
+        erro: `OS está "${STATUS_OS_LABEL[ordem.status]}", não é possível liberar para execução.`,
+      };
+    }
+
+    if (ordem.galpao) {
+      await retomarOrdem(supabase, id);
+      revalidatePath("/patio");
+      return { ok: true, data: { galpao: ordem.galpao as Galpao } };
+    }
+
+    const ordens = await listarOrdensDoQuadro(supabase);
+    const { galpao } = galpaoMenosOcupado(ordens);
+    await iniciarOrdem(supabase, id, galpao);
+    revalidatePath("/patio");
+    return { ok: true, data: { galpao } };
+  } catch (e) {
+    return {
+      ok: false,
+      erro: mensagemDeErro(e, "Não foi possível liberar a OS. Tente novamente."),
+    };
   }
 }
 

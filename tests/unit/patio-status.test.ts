@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   galpaoMenosOcupado,
   LIMITE_AGUARDANDO_HORAS,
+  LIMITE_CONFIRMACAO_HORAS,
   LIMITE_EXECUCAO_HORAS,
   LIMITE_PARADO_HORAS,
   lotacaoGalpoes,
@@ -27,6 +28,19 @@ describe("transicaoPermitida", () => {
   it("permite parado -> em_execucao (retomar) e -> cancelada", () => {
     expect(transicaoPermitida("parado", "em_execucao")).toBe(true);
     expect(transicaoPermitida("parado", "cancelada")).toBe(true);
+  });
+
+  it("permite entrar e sair de 'esperando confirmação do cliente'", () => {
+    // Entra a partir de aguardando (antes de começar) ou de em_execucao.
+    expect(transicaoPermitida("aguardando", "aguardando_confirmacao")).toBe(true);
+    expect(transicaoPermitida("em_execucao", "aguardando_confirmacao")).toBe(true);
+    // Sai para execução (aprovou), volta pra fila (adiar) ou cancela (recusou).
+    expect(transicaoPermitida("aguardando_confirmacao", "em_execucao")).toBe(true);
+    expect(transicaoPermitida("aguardando_confirmacao", "aguardando")).toBe(true);
+    expect(transicaoPermitida("aguardando_confirmacao", "cancelada")).toBe(true);
+    // Não pula direto para concluído nem parado.
+    expect(transicaoPermitida("aguardando_confirmacao", "concluido")).toBe(false);
+    expect(transicaoPermitida("aguardando_confirmacao", "parado")).toBe(false);
   });
 
   it("bloqueia pular etapas ou ir direto de/para estados terminais", () => {
@@ -77,6 +91,13 @@ describe("nivelAtencao", () => {
     expect(nivelAtencao("parado", agora, agora, pausa, agora)).toBe("atencao");
   });
 
+  it("aguardando_confirmacao usa data_pausa (espera do cliente)", () => {
+    const dentro = new Date(agora.getTime() - (LIMITE_CONFIRMACAO_HORAS - 1) * 60 * 60 * 1000);
+    const fora = new Date(agora.getTime() - (LIMITE_CONFIRMACAO_HORAS + 1) * 60 * 60 * 1000);
+    expect(nivelAtencao("aguardando_confirmacao", agora, agora, dentro, agora)).toBe("ok");
+    expect(nivelAtencao("aguardando_confirmacao", agora, agora, fora, agora)).toBe("atencao");
+  });
+
   it("concluido e cancelada nunca ficam em atencao", () => {
     const antiga = new Date(agora.getTime() - 999 * 60 * 60 * 1000);
     expect(nivelAtencao("concluido", antiga, antiga, null, agora)).toBe("ok");
@@ -94,6 +115,15 @@ describe("lotacaoGalpoes / galpaoMenosOcupado", () => {
       { status: "concluido", galpao: 3 }, // não conta mais como ocupando o galpão
     ];
     expect(lotacaoGalpoes(ordens)).toEqual({ 1: 2, 2: 1, 3: 0 });
+  });
+
+  it("conta OS em 'esperando confirmação' com galpão (o carro segue na baia)", () => {
+    const ordens: OrdemParaLotacao[] = [
+      { status: "aguardando_confirmacao", galpao: 1 },
+      { status: "em_execucao", galpao: 1 },
+      { status: "aguardando_confirmacao", galpao: null }, // ainda sem baia, não conta
+    ];
+    expect(lotacaoGalpoes(ordens)).toEqual({ 1: 2, 2: 0, 3: 0 });
   });
 
   it("sugere o galpão menos ocupado", () => {

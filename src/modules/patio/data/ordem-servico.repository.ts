@@ -256,7 +256,25 @@ export async function criarOrdem(
 export async function iniciarOrdem(supabase: Client, id: string, galpao: Galpao) {
   const { error } = await supabase
     .from("ordem_servico")
-    .update({ status: "em_execucao", data_inicio: new Date().toISOString(), galpao })
+    // Limpa data_pausa: pode vir de "esperando confirmação", que carimba a pausa.
+    .update({
+      status: "em_execucao",
+      data_inicio: new Date().toISOString(),
+      galpao,
+      data_pausa: null,
+      motivo_parada: null,
+    })
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+// Coloca a OS na coluna "Esperando Confirmação do Cliente". Mantém o galpão e o
+// data_inicio (o carro segue na baia) e carimba data_pausa para medir a espera.
+export async function enviarParaConfirmacao(supabase: Client, id: string) {
+  const { error } = await supabase
+    .from("ordem_servico")
+    .update({ status: "aguardando_confirmacao", data_pausa: new Date().toISOString() })
     .eq("id", id);
 
   if (error) throw error;
@@ -267,7 +285,13 @@ export async function iniciarOrdem(supabase: Client, id: string, galpao: Galpao)
 export async function voltarParaAguardando(supabase: Client, id: string) {
   const { error } = await supabase
     .from("ordem_servico")
-    .update({ status: "aguardando", galpao: null, data_inicio: null, motivo_parada: null })
+    .update({
+      status: "aguardando",
+      galpao: null,
+      data_inicio: null,
+      data_pausa: null,
+      motivo_parada: null,
+    })
     .eq("id", id);
 
   if (error) throw error;

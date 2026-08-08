@@ -7,8 +7,11 @@ import { CAPACIDADE_GALPAO, GALPOES, type Galpao } from "./types";
  */
 
 const TRANSICOES: Record<StatusOS, StatusOS[]> = {
-  aguardando: ["em_execucao", "cancelada"],
-  em_execucao: ["aguardando", "parado", "concluido"],
+  aguardando: ["aguardando_confirmacao", "em_execucao", "cancelada"],
+  // "Esperando confirmação do cliente": aguarda o OK do orçamento. Pode ir pra
+  // execução (aprovou), voltar pra fila (adiar) ou ser cancelada (recusou).
+  aguardando_confirmacao: ["em_execucao", "aguardando", "cancelada"],
+  em_execucao: ["aguardando", "aguardando_confirmacao", "parado", "concluido"],
   parado: ["em_execucao", "cancelada"],
   concluido: [],
   cancelada: [],
@@ -24,6 +27,9 @@ export function transicaoPermitida(de: StatusOS, para: StatusOS): boolean {
 export const LIMITE_AGUARDANDO_HORAS = 24;
 export const LIMITE_EXECUCAO_HORAS = 48;
 export const LIMITE_PARADO_HORAS = 168; // 7 dias
+// Cliente demorando pra confirmar o orçamento merece cobrança da Michele —
+// limite intermediário (aproveita data_pausa, carimbada ao entrar na coluna).
+export const LIMITE_CONFIRMACAO_HORAS = 48;
 
 export type NivelAtencao = "ok" | "atencao";
 
@@ -36,6 +42,9 @@ export function nivelAtencao(
 ): NivelAtencao {
   if (status === "aguardando") {
     return horasEntre(dataAbertura, agora) >= LIMITE_AGUARDANDO_HORAS ? "atencao" : "ok";
+  }
+  if (status === "aguardando_confirmacao" && dataPausa) {
+    return horasEntre(dataPausa, agora) >= LIMITE_CONFIRMACAO_HORAS ? "atencao" : "ok";
   }
   if (status === "em_execucao" && dataInicio) {
     return horasEntre(dataInicio, agora) >= LIMITE_EXECUCAO_HORAS ? "atencao" : "ok";
@@ -55,11 +64,14 @@ export interface OrdemParaLotacao {
   status: StatusOS;
 }
 
-// 'parado' continua ocupando a vaga física — o carro não saiu do galpão.
+// 'parado' e 'aguardando_confirmacao' continuam ocupando a vaga física — o
+// carro não saiu do galpão enquanto espera peça, pagamento ou o OK do cliente.
+const STATUS_OCUPA_GALPAO: StatusOS[] = ["em_execucao", "parado", "aguardando_confirmacao"];
+
 export function lotacaoGalpoes(ordens: OrdemParaLotacao[]): Record<Galpao, number> {
   const contagem: Record<Galpao, number> = { 1: 0, 2: 0, 3: 0 };
   for (const ordem of ordens) {
-    if ((ordem.status === "em_execucao" || ordem.status === "parado") && ordem.galpao) {
+    if (STATUS_OCUPA_GALPAO.includes(ordem.status) && ordem.galpao) {
       contagem[ordem.galpao as Galpao] += 1;
     }
   }

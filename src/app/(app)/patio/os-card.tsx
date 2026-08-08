@@ -19,6 +19,7 @@ import {
 } from "@/modules/patio/domain/types";
 import { statusPagamento, type NivelAtencao } from "@/modules/patio/domain/status";
 import type { ValoresConclusao } from "@/modules/patio/data/ordem-servico.repository";
+import type { TipoItemOrcamento } from "@/modules/orcamento/data/tipo-item.repository";
 import { ConcluirOsDialog } from "./concluir-os-dialog";
 import { OrcamentoDialog } from "./orcamento-dialog";
 import { AvisarClienteButton } from "./avisar-cliente-button";
@@ -34,11 +35,15 @@ export function OsCard({
   valoresConclusao,
   condicoesPagamento,
   markup,
+  markupHabilitado,
+  tipos,
   onIniciar,
   onVoltar,
   onPausar,
   onRetomar,
   onCancelar,
+  onEnviarConfirmacao,
+  onConfirmarCliente,
   onMoverGalpao,
 }: {
   ordem: OrdemComRelacoes;
@@ -49,19 +54,28 @@ export function OsCard({
   valoresConclusao?: ValoresConclusao;
   condicoesPagamento: string | null;
   markup: number;
+  markupHabilitado: boolean;
+  tipos: TipoItemOrcamento[];
   onIniciar: () => void;
   onVoltar: () => void;
   onPausar: () => void;
   onRetomar: () => void;
   onCancelar: () => void;
+  onEnviarConfirmacao: () => void;
+  onConfirmarCliente: () => void;
   onMoverGalpao: (galpao: Galpao) => void;
 }) {
   const pagamento = statusPagamento(ordem.conta_financeira);
   const podeReceber =
     ordem.status === "concluido" && (pagamento === "pendente" || pagamento === "parcial");
-  const mostraGalpao = ordem.status === "em_execucao" || ordem.status === "parado";
+  const mostraGalpao =
+    (ordem.status === "em_execucao" ||
+      ordem.status === "parado" ||
+      ordem.status === "aguardando_confirmacao") &&
+    ordem.galpao !== null;
   const podeOrcar =
     ordem.status === "aguardando" ||
+    ordem.status === "aguardando_confirmacao" ||
     ordem.status === "em_execucao" ||
     ordem.status === "parado";
 
@@ -176,9 +190,10 @@ export function OsCard({
           <OrcamentoDialog
             ordemId={ordem.id}
             numero={ordem.numero}
-            status={ordem.status}
             pecas={pecas}
             markup={markup}
+            markupHabilitado={markupHabilitado}
+            tipos={tipos}
           />
         )}
         {ordem.status === "aguardando" && (
@@ -195,10 +210,30 @@ export function OsCard({
             </Button>
           </>
         )}
+        {ordem.status === "aguardando_confirmacao" && (
+          <>
+            <Button
+              size="sm"
+              onClick={onConfirmarCliente}
+              className="bg-action text-action-foreground hover:bg-action/90"
+            >
+              Cliente aprovou
+            </Button>
+            <Button size="sm" variant="ghost" onClick={onVoltar} aria-label="Voltar para aguardando">
+              <ArrowLeft className="size-4" />
+            </Button>
+            <Button size="sm" variant="ghost" onClick={onCancelar}>
+              Cancelar
+            </Button>
+          </>
+        )}
         {ordem.status === "em_execucao" && (
           <>
             <Button size="sm" variant="ghost" onClick={onVoltar} aria-label="Voltar para aguardando">
               <ArrowLeft className="size-4" />
+            </Button>
+            <Button size="sm" variant="outline" onClick={onEnviarConfirmacao}>
+              Aguardar confirmação
             </Button>
             <Button size="sm" variant="outline" onClick={onPausar}>
               Pausar

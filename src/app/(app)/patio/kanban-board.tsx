@@ -7,12 +7,15 @@ import { toast } from "sonner";
 import { LogIn, RefreshCw } from "lucide-react";
 import {
   cancelarOrdemAction,
+  confirmarClienteAction,
+  enviarConfirmacaoAction,
   iniciarOrdemAction,
   moverGalpaoAction,
   pausarOrdemAction,
   retomarOrdemAction,
   voltarOrdemAction,
 } from "@/modules/patio/application/ordem-servico.actions";
+import type { TipoItemOrcamento } from "@/modules/orcamento/data/tipo-item.repository";
 import { lotacaoGalpoes, nivelAtencao, transicaoPermitida } from "@/modules/patio/domain/status";
 import {
   CAPACIDADE_GALPAO,
@@ -28,7 +31,13 @@ import { OsCard } from "./os-card";
 import { NovaOsDialog, type FuncionarioOpcao } from "./nova-os-dialog";
 import type { PecaOpcao } from "./usar-peca-dialog";
 
-const COLUNAS: StatusOS[] = ["aguardando", "em_execucao", "parado", "concluido"];
+const COLUNAS: StatusOS[] = [
+  "aguardando",
+  "aguardando_confirmacao",
+  "em_execucao",
+  "parado",
+  "concluido",
+];
 
 export function KanbanBoard({
   ordens,
@@ -39,6 +48,8 @@ export function KanbanBoard({
   conclusaoPorOs,
   condicoesPagamento,
   markup,
+  markupHabilitado,
+  tipos,
 }: {
   ordens: OrdemComRelacoes[];
   categoriasReceita: { id: string; nome: string }[];
@@ -48,6 +59,8 @@ export function KanbanBoard({
   conclusaoPorOs: Record<string, ValoresConclusao>;
   condicoesPagamento: string | null;
   markup: number;
+  markupHabilitado: boolean;
+  tipos: TipoItemOrcamento[];
 }) {
   const router = useRouter();
 
@@ -100,6 +113,26 @@ export function KanbanBoard({
     router.refresh();
   }
 
+  async function enviarConfirmacao(id: string) {
+    const resultado = await enviarConfirmacaoAction(id);
+    if (!resultado.ok) {
+      toast.error(resultado.erro);
+      return;
+    }
+    toast.success("OS movida para Esperando Confirmação do Cliente.");
+    router.refresh();
+  }
+
+  async function confirmarCliente(id: string) {
+    const resultado = await confirmarClienteAction(id);
+    if (!resultado.ok) {
+      toast.error(resultado.erro);
+      return;
+    }
+    toast.success("Cliente aprovou — OS liberada para execução.");
+    router.refresh();
+  }
+
   async function cancelar(id: string) {
     const resultado = await cancelarOrdemAction(id);
     if (!resultado.ok) {
@@ -132,7 +165,15 @@ export function KanbanBoard({
 
       if (destino === "em_execucao" && origem.status === "aguardando") void iniciar(origem.id);
       else if (destino === "em_execucao" && origem.status === "parado") void retomar(origem.id);
+      else if (destino === "em_execucao" && origem.status === "aguardando_confirmacao")
+        void confirmarCliente(origem.id);
+      else if (destino === "aguardando_confirmacao" && origem.status === "aguardando")
+        void enviarConfirmacao(origem.id);
+      else if (destino === "aguardando_confirmacao" && origem.status === "em_execucao")
+        void enviarConfirmacao(origem.id);
       else if (destino === "aguardando" && origem.status === "em_execucao") void voltar(origem.id);
+      else if (destino === "aguardando" && origem.status === "aguardando_confirmacao")
+        void voltar(origem.id);
       else if (destino === "parado" && origem.status === "em_execucao") void pausar(origem.id);
     };
   }
@@ -169,7 +210,7 @@ export function KanbanBoard({
         ))}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {COLUNAS.map((status) => {
           const ordensColuna = ordens.filter((o) => o.status === status);
 
@@ -208,11 +249,15 @@ export function KanbanBoard({
                     valoresConclusao={conclusaoPorOs[ordem.id]}
                     condicoesPagamento={condicoesPagamento}
                     markup={markup}
+                    markupHabilitado={markupHabilitado}
+                    tipos={tipos}
                     onIniciar={() => void iniciar(ordem.id)}
                     onVoltar={() => void voltar(ordem.id)}
                     onPausar={() => void pausar(ordem.id)}
                     onRetomar={() => void retomar(ordem.id)}
                     onCancelar={() => void cancelar(ordem.id)}
+                    onEnviarConfirmacao={() => void enviarConfirmacao(ordem.id)}
+                    onConfirmarCliente={() => void confirmarCliente(ordem.id)}
                     onMoverGalpao={(g) => void moverGalpao(ordem.id, g)}
                   />
                 ))}

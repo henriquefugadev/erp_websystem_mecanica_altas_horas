@@ -9,22 +9,32 @@ import { listarCategorias } from "@/modules/financeiro/data/categoria.repository
 import { listarFuncionarios } from "@/modules/funcionarios/data/funcionario.repository";
 import { listarPecas } from "@/modules/estoque/data/peca.repository";
 import { buscarConfiguracao } from "@/modules/workshop/data/workshop.repository";
+import { listarTiposItemOrcamento } from "@/modules/orcamento/data/tipo-item.repository";
 import { KanbanBoard } from "./kanban-board";
 
 export default async function PatioPage() {
   const supabase = await createClient();
   const sessao = await getSessaoAtual();
 
-  const [ordens, categoriasReceita, funcionarios, pecas, diagnosticoPorOs, conclusaoPorOs, workshop] =
-    await Promise.all([
-      listarOrdensDoQuadro(supabase),
-      listarCategorias(supabase, "receita"),
-      listarFuncionarios(supabase, true),
-      listarPecas(supabase, true),
-      contarDiagnosticoPorOs(supabase),
-      valoresConclusaoPorOs(supabase),
-      sessao ? buscarConfiguracao(supabase, sessao.workshopId) : Promise.resolve(null),
-    ]);
+  const [
+    ordens,
+    categoriasReceita,
+    funcionarios,
+    pecas,
+    diagnosticoPorOs,
+    conclusaoPorOs,
+    workshop,
+    tipos,
+  ] = await Promise.all([
+    listarOrdensDoQuadro(supabase),
+    listarCategorias(supabase, "receita"),
+    listarFuncionarios(supabase, true),
+    listarPecas(supabase, true),
+    contarDiagnosticoPorOs(supabase),
+    valoresConclusaoPorOs(supabase),
+    sessao ? buscarConfiguracao(supabase, sessao.workshopId) : Promise.resolve(null),
+    listarTiposItemOrcamento(supabase, true),
+  ]);
 
   return (
     <KanbanBoard
@@ -36,6 +46,8 @@ export default async function PatioPage() {
       conclusaoPorOs={conclusaoPorOs}
       condicoesPagamento={workshop?.condicoes_pagamento_padrao ?? null}
       markup={workshop?.markup_peca_percentual ?? 30}
+      markupHabilitado={workshop?.markup_habilitado ?? false}
+      tipos={tipos}
     />
   );
 }
