@@ -14,6 +14,7 @@ export interface DiagnosticoRascunho {
   orcamentoId: string;
   itens: {
     tipo: "peca" | "servico";
+    tipoNome: string | null;
     descricao: string;
     quantidade: number;
     pecaId: string | null;
@@ -29,6 +30,7 @@ export interface DiagnosticoRascunho {
 function mapItensDiagnostico(itens: DiagnosticoOutput["itens"]) {
   return itens.map((item) => ({
     tipo: item.tipo,
+    tipo_nome: item.tipoNome || null,
     descricao: item.descricao,
     quantidade: item.quantidade,
     peca_id: item.pecaId || null,
@@ -138,7 +140,7 @@ export async function buscarOrcamentoRascunhoDaOs(
   const { data, error } = await supabase
     .from("orcamento")
     .select(
-      "id, orcamento_item(tipo, descricao, quantidade, peca_id, fornecedor_id, preco_unitario, desconto, custo_cotado, created_at)"
+      "id, orcamento_item(tipo, tipo_nome, descricao, quantidade, peca_id, fornecedor_id, preco_unitario, desconto, custo_cotado, created_at)"
     )
     .eq("ordem_servico_id", ordemId)
     .eq("status", "rascunho")
@@ -154,6 +156,7 @@ export async function buscarOrcamentoRascunhoDaOs(
     .sort((a, b) => a.created_at.localeCompare(b.created_at))
     .map((i) => ({
       tipo: i.tipo,
+      tipoNome: i.tipo_nome,
       descricao: i.descricao,
       quantidade: i.quantidade,
       pecaId: i.peca_id,

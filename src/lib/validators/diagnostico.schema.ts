@@ -21,7 +21,12 @@ const custoOpcional = z
   .transform((v) => (v === "" || v == null ? null : v));
 
 export const itemDiagnosticoSchema = z.object({
+  // Natureza (peça/serviço) — dirige a categorização/compra. O rótulo livre
+  // escolhido pela oficina vem em tipoNome; tipoId só existe no formulário
+  // para pré-selecionar o tipo no dropdown (não é persistido).
   tipo: z.enum(["peca", "servico"]),
+  tipoNome: z.string().trim().optional().or(z.literal("")),
+  tipoId: z.string().trim().optional().or(z.literal("")),
   descricao: z.string().trim().min(1, "Descreva o item"),
   quantidade: z
     .union([z.literal(""), z.coerce.number({ error: "Quantidade inválida" })])

@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { getSessaoAtual } from "@/lib/supabase/sessao";
 import { createClient } from "@/lib/supabase/server";
 import { buscarConfiguracao, obterUrlLogo } from "@/modules/workshop/data/workshop.repository";
+import { listarTiposItemOrcamento } from "@/modules/orcamento/data/tipo-item.repository";
 import { ConfiguracoesForm } from "./configuracoes-form";
+import { ConfiguracoesTipos } from "./configuracoes-tipos";
 
 export default async function ConfiguracoesPage() {
   const sessao = await getSessaoAtual();
@@ -13,13 +15,17 @@ export default async function ConfiguracoesPage() {
   if (sessao.papel !== "admin") redirect("/financeiro");
 
   const supabase = await createClient();
-  const workshop = await buscarConfiguracao(supabase, sessao.workshopId);
+  const [workshop, tipos] = await Promise.all([
+    buscarConfiguracao(supabase, sessao.workshopId),
+    listarTiposItemOrcamento(supabase),
+  ]);
   const logoUrl = workshop.logo_path ? await obterUrlLogo(supabase, workshop.logo_path) : null;
 
   return (
     <div className="grid max-w-2xl gap-6">
       <h1 className="font-heading text-2xl">Configurações</h1>
       <ConfiguracoesForm workshop={workshop} logoUrl={logoUrl} />
+      <ConfiguracoesTipos tipos={tipos} />
     </div>
   );
 }

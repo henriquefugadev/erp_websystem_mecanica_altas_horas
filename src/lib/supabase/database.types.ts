@@ -18,7 +18,14 @@ export type FormaPagamento =
   | "cartao_debito"
   | "pix"
   | "boleto";
-export type StatusOS = "aguardando" | "em_execucao" | "parado" | "concluido" | "cancelada";
+export type StatusOS =
+  | "aguardando"
+  | "aguardando_confirmacao"
+  | "em_execucao"
+  | "parado"
+  | "concluido"
+  | "cancelada";
+export type NaturezaItemOrcamento = "peca" | "servico";
 export type MotivoParada =
   | "aguardando_peca"
   | "aguardando_aprovacao"
@@ -64,6 +71,8 @@ export interface Database {
           validade_orcamento_dias: number;
           markup_peca_percentual: number;
           valor_hora_mao_obra: number;
+          markup_habilitado: boolean;
+          nav_ocultos: string[];
           logo_path: string | null;
           created_at: string;
           updated_at: string;
@@ -87,6 +96,8 @@ export interface Database {
           validade_orcamento_dias?: number;
           markup_peca_percentual?: number;
           valor_hora_mao_obra?: number;
+          markup_habilitado?: boolean;
+          nav_ocultos?: string[];
           logo_path?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["workshop"]["Insert"]>;
@@ -555,6 +566,7 @@ export interface Database {
           peca_id: string | null;
           fornecedor_id: string | null;
           tipo: TipoItemOrcamento;
+          tipo_nome: string | null;
           descricao: string;
           quantidade: number;
           preco_unitario: number;
@@ -572,6 +584,7 @@ export interface Database {
           peca_id?: string | null;
           fornecedor_id?: string | null;
           tipo: TipoItemOrcamento;
+          tipo_nome?: string | null;
           descricao: string;
           quantidade?: number;
           preco_unitario: number;
@@ -597,6 +610,28 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      tipo_item_orcamento: {
+        Row: {
+          id: string;
+          workshop_id: string;
+          nome: string;
+          natureza: NaturezaItemOrcamento;
+          ativo: boolean;
+          ordem: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workshop_id: string;
+          nome: string;
+          natureza: NaturezaItemOrcamento;
+          ativo?: boolean;
+          ordem?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["tipo_item_orcamento"]["Insert"]>;
+        Relationships: [];
       };
       fornecedor: {
         Row: {
