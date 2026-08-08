@@ -20,7 +20,7 @@ export default async function AppLayout({
   const supabase = await createClient();
   const { data: workshop } = await supabase
     .from("workshop")
-    .select("nome")
+    .select("nome, nav_ocultos")
     .eq("id", sessao.workshopId)
     .single();
 
@@ -33,6 +33,7 @@ export default async function AppLayout({
         nomeUsuario={sessao.nome}
         nomeOficina={workshop?.nome ?? ""}
         papel={sessao.papel}
+        navOcultos={workshop?.nav_ocultos ?? []}
       />
       <SidebarInset className="overflow-x-auto p-6">
         {children}

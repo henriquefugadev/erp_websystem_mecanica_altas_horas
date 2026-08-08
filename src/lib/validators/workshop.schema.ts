@@ -43,6 +43,11 @@ export const workshopSchema = z.object({
   validadeOrcamentoDias: z.coerce.number().int().min(1, "Mínimo 1 dia"),
   markupPecaPercentual: z.coerce.number().min(0, "Não pode ser negativo"),
   valorHoraMaoObra: z.coerce.number().min(0, "Não pode ser negativo"),
+  // Liga/desliga do botão "Aplicar markup" no orçamento — o código fica, só
+  // some da tela quando desligado.
+  markupHabilitado: z.boolean().optional().default(false),
+  // Hrefs de itens da sidebar que ficam escondidos (sem apagar rota/código).
+  navOcultos: z.array(z.string()).optional().default([]),
 });
 
 // workshopSchema termina com .transform() em vários campos; o formulário

@@ -18,6 +18,7 @@ import {
 import { normalizarCEP } from "@/lib/validators/contato";
 import { buscarEnderecoPorCep } from "@/lib/format/via-cep";
 import type { Workshop } from "@/modules/workshop/domain/types";
+import { NAV_GROUPS } from "@/components/layout/nav-items";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,8 +43,19 @@ function valoresIniciais(workshop: Workshop): WorkshopFormValues {
     validadeOrcamentoDias: workshop.validade_orcamento_dias,
     markupPecaPercentual: workshop.markup_peca_percentual,
     valorHoraMaoObra: workshop.valor_hora_mao_obra,
+    markupHabilitado: workshop.markup_habilitado,
+    navOcultos: workshop.nav_ocultos ?? [],
   };
 }
+
+// Itens que a sidebar pode esconder — derivados de NAV_GROUPS para não
+// duplicar rótulos. Configurações nunca entra (o admin precisa religar os
+// outros a partir daqui).
+const ITENS_SIDEBAR = NAV_GROUPS.flatMap((grupo) =>
+  grupo.items
+    .filter((item) => item.href !== "/configuracoes")
+    .map((item) => ({ href: item.href, label: item.label }))
+);
 
 export function ConfiguracoesForm({
   workshop,
@@ -65,6 +77,15 @@ export function ConfiguracoesForm({
 
   const errors = form.formState.errors;
   const cepRegister = form.register("cep");
+  const navOcultos = form.watch("navOcultos") ?? [];
+
+  function toggleNav(href: string, visivel: boolean) {
+    const atuais = form.getValues("navOcultos") ?? [];
+    const proximos = visivel
+      ? atuais.filter((h) => h !== href)
+      : [...atuais, href];
+    form.setValue("navOcultos", proximos, { shouldDirty: true });
+  }
 
   async function onSubmit(dados: WorkshopInput) {
     setErro(null);
@@ -295,35 +316,73 @@ export function ConfiguracoesForm({
           <CardHeader>
             <CardTitle className="text-base">Precificação</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
-            <div className="grid gap-1.5">
-              <Label htmlFor="markupPecaPercentual" required>
-                Markup de peça (%)
-              </Label>
-              <Input
-                id="markupPecaPercentual"
-                type="number"
-                min={0}
-                step="0.01"
-                {...form.register("markupPecaPercentual")}
+          <CardContent className="grid gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="size-4 accent-[var(--action)]"
+                {...form.register("markupHabilitado")}
               />
-              <p className="text-xs text-muted-foreground">
-                Aplicado sobre o custo cotado para sugerir o preço de venda.
-              </p>
-              {errors.markupPecaPercentual && (
-                <Erro msg={errors.markupPecaPercentual.message} />
-              )}
+              Habilitar o botão &ldquo;Aplicar markup&rdquo; no orçamento do pátio
+            </label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-1.5">
+                <Label htmlFor="markupPecaPercentual" required>
+                  Markup de peça (%)
+                </Label>
+                <Input
+                  id="markupPecaPercentual"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  {...form.register("markupPecaPercentual")}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Aplicado sobre o custo cotado para sugerir o preço de venda.
+                </p>
+                {errors.markupPecaPercentual && (
+                  <Erro msg={errors.markupPecaPercentual.message} />
+                )}
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="valorHoraMaoObra">Valor da hora de mão de obra (R$)</Label>
+                <Input
+                  id="valorHoraMaoObra"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  {...form.register("valorHoraMaoObra")}
+                />
+                {errors.valorHoraMaoObra && <Erro msg={errors.valorHoraMaoObra.message} />}
+              </div>
             </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="valorHoraMaoObra">Valor da hora de mão de obra (R$)</Label>
-              <Input
-                id="valorHoraMaoObra"
-                type="number"
-                min={0}
-                step="0.01"
-                {...form.register("valorHoraMaoObra")}
-              />
-              {errors.valorHoraMaoObra && <Erro msg={errors.valorHoraMaoObra.message} />}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Itens da barra lateral</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            <p className="text-xs text-muted-foreground">
+              Desmarque para esconder o item do menu (o código e as rotas continuam — dá para
+              religar quando precisar).
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {ITENS_SIDEBAR.map((item) => {
+                const oculto = navOcultos.includes(item.href);
+                return (
+                  <label key={item.href} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="size-4 accent-[var(--action)]"
+                      checked={!oculto}
+                      onChange={(e) => toggleNav(item.href, e.target.checked)}
+                    />
+                    {item.label}
+                  </label>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

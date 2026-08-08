@@ -41,6 +41,8 @@ export async function atualizarConfiguracao(
       validade_orcamento_dias: dados.validadeOrcamentoDias,
       markup_peca_percentual: dados.markupPecaPercentual,
       valor_hora_mao_obra: dados.valorHoraMaoObra,
+      markup_habilitado: dados.markupHabilitado,
+      nav_ocultos: dados.navOcultos,
     })
     .eq("id", workshopId)
     .select()
