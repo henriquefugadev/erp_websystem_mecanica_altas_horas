@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Building2, Clock, User, Wrench } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Clock, User, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +45,8 @@ export function OsCard({
   onEnviarConfirmacao,
   onConfirmarCliente,
   onMoverGalpao,
+  orcamentoAberto,
+  onOrcamentoAbertoChange,
 }: {
   ordem: OrdemComRelacoes;
   nivel: NivelAtencao;
@@ -64,6 +66,8 @@ export function OsCard({
   onEnviarConfirmacao: () => void;
   onConfirmarCliente: () => void;
   onMoverGalpao: (galpao: Galpao) => void;
+  orcamentoAberto: boolean;
+  onOrcamentoAbertoChange: (open: boolean) => void;
 }) {
   const pagamento = statusPagamento(ordem.conta_financeira);
   const podeReceber =
@@ -190,10 +194,13 @@ export function OsCard({
           <OrcamentoDialog
             ordemId={ordem.id}
             numero={ordem.numero}
+            statusOs={ordem.status}
             pecas={pecas}
             markup={markup}
             markupHabilitado={markupHabilitado}
             tipos={tipos}
+            open={orcamentoAberto}
+            onOpenChange={onOrcamentoAbertoChange}
           />
         )}
         {ordem.status === "aguardando" && (
@@ -205,6 +212,16 @@ export function OsCard({
             >
               Iniciar
             </Button>
+            {/* Avança 1 coluna: manda para "Esperando Confirmação do Cliente". */}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onEnviarConfirmacao}
+              aria-label="Avançar para Esperando Confirmação do Cliente"
+              title="Esperando Confirmação do Cliente"
+            >
+              <ArrowRight className="size-4" />
+            </Button>
             <Button size="sm" variant="ghost" onClick={onCancelar}>
               Cancelar
             </Button>
@@ -212,15 +229,22 @@ export function OsCard({
         )}
         {ordem.status === "aguardando_confirmacao" && (
           <>
+            {/* Volta 1 coluna: retorna para "Aguardando". */}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onVoltar}
+              aria-label="Voltar para Aguardando"
+              title="Aguardando"
+            >
+              <ArrowLeft className="size-4" />
+            </Button>
             <Button
               size="sm"
               onClick={onConfirmarCliente}
               className="bg-action text-action-foreground hover:bg-action/90"
             >
               Cliente aprovou
-            </Button>
-            <Button size="sm" variant="ghost" onClick={onVoltar} aria-label="Voltar para aguardando">
-              <ArrowLeft className="size-4" />
             </Button>
             <Button size="sm" variant="ghost" onClick={onCancelar}>
               Cancelar
@@ -229,11 +253,16 @@ export function OsCard({
         )}
         {ordem.status === "em_execucao" && (
           <>
-            <Button size="sm" variant="ghost" onClick={onVoltar} aria-label="Voltar para aguardando">
+            {/* Volta 1 coluna: retorna para "Esperando Confirmação do Cliente"
+                (antes pulava direto para "Aguardando"). */}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onEnviarConfirmacao}
+              aria-label="Voltar para Esperando Confirmação do Cliente"
+              title="Esperando Confirmação do Cliente"
+            >
               <ArrowLeft className="size-4" />
-            </Button>
-            <Button size="sm" variant="outline" onClick={onEnviarConfirmacao}>
-              Aguardar confirmação
             </Button>
             <Button size="sm" variant="outline" onClick={onPausar}>
               Pausar
@@ -242,6 +271,8 @@ export function OsCard({
             <ConcluirOsDialog
               ordemId={ordem.id}
               numero={ordem.numero}
+              cliente={ordem.cliente}
+              veiculo={ordem.veiculo}
               categoriasReceita={categoriasReceita}
             />
           </>

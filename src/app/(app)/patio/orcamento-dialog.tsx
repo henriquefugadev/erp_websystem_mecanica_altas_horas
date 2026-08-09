@@ -13,7 +13,13 @@ import {
   buscarDiagnosticoAction,
   salvarDiagnosticoAction,
 } from "@/modules/orcamento/application/orcamento.actions";
-import { aplicarMarkup, calcularTotalOrcamento } from "@/modules/orcamento/domain/calculo";
+import { enviarConfirmacaoAction } from "@/modules/patio/application/ordem-servico.actions";
+import type { StatusOS } from "@/lib/supabase/database.types";
+import {
+  aplicarMarkup,
+  totalDaLinhaParaUnitario,
+  unitarioParaTotalDaLinha,
+} from "@/modules/orcamento/domain/calculo";
 import type { TipoItemOrcamento } from "@/modules/orcamento/data/tipo-item.repository";
 import { formatarDinheiro } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -49,6 +55,10 @@ const TIPOS_PADRAO: TipoItemOrcamento[] = [
   { id: "__servico", nome: "Serviço", natureza: "servico", ativo: true, ordem: 1 },
 ];
 
+function arredondarCentavos(valor: number): number {
+  return Math.round((valor + Number.EPSILON) * 100) / 100;
+}
+
 function itemVazio(tipo: TipoItemOrcamento): ItemForm {
   return {
     tipo: tipo.natureza,
@@ -67,20 +77,26 @@ function itemVazio(tipo: TipoItemOrcamento): ItemForm {
 export function OrcamentoDialog({
   ordemId,
   numero,
+  statusOs,
   pecas,
   markup,
   markupHabilitado,
   tipos,
+  open,
+  onOpenChange,
 }: {
   ordemId: string;
   numero: number;
+  statusOs: StatusOS;
   pecas: PecaOpcao[];
   markup: number;
   markupHabilitado: boolean;
   tipos: TipoItemOrcamento[];
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [openInterno, setOpenInterno] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -89,6 +105,8 @@ export function OrcamentoDialog({
   const [orcamentoId, setOrcamentoId] = useState<string | null>(null);
   const descRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [proximoFoco, setProximoFoco] = useState<number | null>(null);
+  const dialogAberto = open ?? openInterno;
+  const setDialogAberto = onOpenChange ?? setOpenInterno;
 
   const tiposUsaveis = useMemo(
     () => (tipos.length > 0 ? tipos : TIPOS_PADRAO),
@@ -125,7 +143,7 @@ export function OrcamentoDialog({
   // Ao abrir, carrega o rascunho já existente da OS (se houver) para editar em
   // vez de recomeçar — preços/custos já lançados voltam preenchidos.
   useEffect(() => {
-    if (!open) return;
+    if (!dialogAberto) return;
     setErro(null);
     setOrcamentoId(null);
     setCarregando(true);
@@ -146,7 +164,10 @@ export function OrcamentoDialog({
               pecaId: i.pecaId ?? "",
               fornecedorId: i.fornecedorId ?? "",
               custoCotado: i.custoCotado != null ? String(i.custoCotado) : "",
-              precoUnitario: i.precoUnitario ? String(i.precoUnitario) : "",
+              // Unitário salvo → total da linha para exibir no campo "Preço".
+              precoUnitario: i.precoUnitario
+                ? String(unitarioParaTotalDaLinha(i.precoUnitario, Number(i.quantidade)))
+                : "",
               desconto: i.desconto ? String(i.desconto) : "",
             })),
           });
@@ -156,7 +177,7 @@ export function OrcamentoDialog({
       })
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, ordemId]);
+  }, [dialogAberto, ordemId]);
 
   // Foca a descrição da linha recém-adicionada (Enter ou botão).
   useEffect(() => {
@@ -166,13 +187,14 @@ export function OrcamentoDialog({
   }, [proximoFoco, fields.length]);
 
   const itensAtuais = form.watch("itens");
-  const totalAoVivo = calcularTotalOrcamento(
-    (itensAtuais ?? []).map((item) => ({
-      quantidade: Number(item.quantidade) || 0,
-      precoUnitario: Number(item.precoUnitario) || 0,
-      desconto: Number(item.desconto) || 0,
-    }))
-  );
+  // O campo "Preço" guarda o total da linha (não o unitário), então o total é a
+  // soma direta dos preços − desconto, sem multiplicar de novo pela quantidade.
+  // A conversão para preço unitário (o que o banco/PDF usam) acontece no submit.
+  const totalAoVivo = (itensAtuais ?? []).reduce((soma, item) => {
+    const preco = Number(item.precoUnitario) || 0;
+    const desc = Number(item.desconto) || 0;
+    return soma + arredondarCentavos(preco - desc);
+  }, 0);
 
   function adicionarLinha() {
     append(itemVazio(tipoPadrao));
@@ -191,6 +213,20 @@ export function OrcamentoDialog({
     const atual = Number(form.getValues(`itens.${index}.quantidade`)) || 0;
     const proximo = Math.max(0, atual + delta);
     form.setValue(`itens.${index}.quantidade`, String(proximo), {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    const custo = Number(form.getValues(`itens.${index}.custoCotado`)) || 0;
+    sincronizarPrecoComCusto(index, proximo, custo);
+  }
+
+  // Preenche o preço com o total da linha (qtd × custo unitário) sempre que há
+  // custo cotado. O campo continua editável — a Michele pode digitar outro valor
+  // por cima. Sem custo, não mexe: linhas de serviço seguem com preço manual.
+  function sincronizarPrecoComCusto(index: number, qtd: number, custo: number) {
+    if (qtd <= 0 || custo <= 0) return;
+    const total = Math.round((qtd * custo + Number.EPSILON) * 100) / 100;
+    form.setValue(`itens.${index}.precoUnitario`, String(total), {
       shouldDirty: true,
       shouldValidate: true,
     });
@@ -219,8 +255,13 @@ export function OrcamentoDialog({
     let aplicados = 0;
     form.getValues("itens").forEach((item, index) => {
       const custo = Number(item.custoCotado);
+      const qtd = Number(item.quantidade) || 0;
       if (item.custoCotado !== "" && custo > 0) {
-        form.setValue(`itens.${index}.precoUnitario`, String(aplicarMarkup(custo, markup)));
+        // markup dá o unitário; o campo mostra o total da linha (× quantidade).
+        const precoLinha = arredondarCentavos(aplicarMarkup(custo, markup) * qtd);
+        form.setValue(`itens.${index}.precoUnitario`, String(precoLinha), {
+          shouldDirty: true,
+        });
         aplicados++;
       }
     });
@@ -232,7 +273,15 @@ export function OrcamentoDialog({
     setErro(null);
     setEnviando(true);
     try {
-      const resultado = await salvarDiagnosticoAction(ordemId, dados);
+      // O form traz o preço como total da linha; o banco espera o unitário.
+      const dadosParaSalvar: FormOutput = {
+        ...dados,
+        itens: dados.itens.map((item) => ({
+          ...item,
+          precoUnitario: totalDaLinhaParaUnitario(item.precoUnitario, item.quantidade),
+        })),
+      };
+      const resultado = await salvarDiagnosticoAction(ordemId, dadosParaSalvar);
       if (!resultado.ok) {
         setErro(resultado.erro);
         return;
@@ -240,7 +289,19 @@ export function OrcamentoDialog({
       setOrcamentoId(resultado.data.orcamentoId);
       // Marca o estado atual como "salvo" (limpa o dirty) para liberar o PDF.
       form.reset(form.getValues());
-      toast.success("Orçamento salvo. Baixe o PDF para enviar ao cliente.");
+      // Feito o orçamento de um carro que ainda está em "Aguardando", ele avança
+      // sozinho para "Esperando Confirmação do Cliente" — a Michele acabou de
+      // montar o que vai mandar pro cliente aprovar.
+      if (statusOs === "aguardando") {
+        const mov = await enviarConfirmacaoAction(ordemId);
+        toast.success(
+          mov.ok
+            ? "Orçamento salvo. OS movida para Esperando Confirmação do Cliente."
+            : "Orçamento salvo. Baixe o PDF para enviar ao cliente."
+        );
+      } else {
+        toast.success("Orçamento salvo. Baixe o PDF para enviar ao cliente.");
+      }
       router.refresh();
     } finally {
       setEnviando(false);
@@ -248,7 +309,7 @@ export function OrcamentoDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
       <DialogTrigger render={<Button size="sm" variant="outline" />}>
         <FileText className="size-4" />
         Orçamento
@@ -274,11 +335,6 @@ export function OrcamentoDialog({
             <p className="py-6 text-center text-sm text-muted-foreground">Carregando...</p>
           ) : (
             fields.map((field, index) => {
-              const item = itensAtuais?.[index];
-              const qtd = Number(item?.quantidade) || 0;
-              const custoUnit = Number(item?.custoCotado) || 0;
-              const temCusto = (item?.custoCotado ?? "") !== "" && custoUnit > 0;
-
               return (
                 <div
                   key={field.id}
@@ -351,7 +407,14 @@ export function OrcamentoDialog({
                         type="text"
                         inputMode="decimal"
                         className="text-center"
-                        {...form.register(`itens.${index}.quantidade`)}
+                        {...form.register(`itens.${index}.quantidade`, {
+                          onChange: (e) =>
+                            sincronizarPrecoComCusto(
+                              index,
+                              Number(e.target.value) || 0,
+                              Number(form.getValues(`itens.${index}.custoCotado`)) || 0
+                            ),
+                        })}
                       />
                       <Button
                         type="button"
@@ -371,13 +434,15 @@ export function OrcamentoDialog({
                       type="text"
                       inputMode="decimal"
                       placeholder="—"
-                      {...form.register(`itens.${index}.custoCotado`)}
+                      {...form.register(`itens.${index}.custoCotado`, {
+                        onChange: (e) =>
+                          sincronizarPrecoComCusto(
+                            index,
+                            Number(form.getValues(`itens.${index}.quantidade`)) || 0,
+                            Number(e.target.value) || 0
+                          ),
+                      })}
                     />
-                    {temCusto && (
-                      <p className="text-xs text-muted-foreground">
-                        Preço Total: {formatarDinheiro(qtd * custoUnit)}
-                      </p>
-                    )}
                   </div>
                   <div className="col-span-2 grid gap-1.5">
                     {index === 0 && <Label required>Preço</Label>}
@@ -442,6 +507,7 @@ export function OrcamentoDialog({
               <Button
                 type="button"
                 variant="outline"
+                nativeButton={false}
                 render={<a href={`/api/orcamentos/${orcamentoId}/pdf`} target="_blank" />}
               >
                 <Download className="size-4" />

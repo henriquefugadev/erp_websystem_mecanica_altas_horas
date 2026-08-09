@@ -25,7 +25,7 @@ export const STATUS_OS_LABEL: Record<StatusOS, string> = {
 
 export type OrdemComRelacoes = OrdemServico & {
   cliente: { nome: string; telefone: string } | null;
-  veiculo: { placa: string; modelo: string; marca: string | null } | null;
+  veiculo: { placa: string; modelo: string; marca: string | null; cor: string | null } | null;
   // conta_financeira → ordem_servico agora é 1:N (itens da conclusão), então
   // o embed do PostgREST vem como array, não mais objeto único.
   conta_financeira: { status: string }[];

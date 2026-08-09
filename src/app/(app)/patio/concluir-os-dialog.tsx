@@ -13,7 +13,7 @@ import {
   concluirOrdemAction,
 } from "@/modules/patio/application/ordem-servico.actions";
 import { agruparValoresPorCategoria } from "@/modules/orcamento/domain/calculo";
-import { formatarDinheiro, hojeSaoPaulo } from "@/lib/format";
+import { formatarDinheiro, formatarPlaca, hojeSaoPaulo } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,10 +53,14 @@ function linhaVazia(categoriaId: string): ItemForm {
 export function ConcluirOsDialog({
   ordemId,
   numero,
+  cliente,
+  veiculo,
   categoriasReceita,
 }: {
   ordemId: string;
   numero: number;
+  cliente: { nome: string; telefone: string } | null;
+  veiculo: { placa: string; modelo: string; marca: string | null; cor: string | null } | null;
   categoriasReceita: { id: string; nome: string }[];
 }) {
   const router = useRouter();
@@ -142,6 +146,30 @@ export function ConcluirOsDialog({
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+          {/* Informações da OS: mesma referência da tela de orçamento, para a
+              Michele conferir de qual carro/cliente é sem sair do dialog. */}
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg bg-muted/40 p-3 text-sm">
+            <Info rotulo="Cliente" valor={cliente?.nome ?? "—"} />
+            <Info
+              rotulo="Veículo"
+              valor={
+                veiculo
+                  ? [
+                      [veiculo.marca, veiculo.modelo].filter(Boolean).join(" ") || "—",
+                      veiculo.cor,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")
+                  : "—"
+              }
+            />
+            <Info
+              rotulo="Placa"
+              valor={veiculo?.placa ? formatarPlaca(veiculo.placa) : "—"}
+            />
+            <Info rotulo="OS" valor={`#${numero}`} />
+          </div>
+
           <div className="grid gap-2">
             <Label>Revise o orçamento antes de fechar</Label>
             <p className="text-xs text-muted-foreground">
@@ -255,4 +283,13 @@ export function ConcluirOsDialog({
 
 function Erro({ msg }: { msg?: string }) {
   return <p className="text-sm text-destructive">{msg}</p>;
+}
+
+function Info({ rotulo, valor }: { rotulo: string; valor: string }) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground">{rotulo}</p>
+      <p className="font-medium">{valor}</p>
+    </div>
+  );
 }

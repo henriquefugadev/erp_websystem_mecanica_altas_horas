@@ -2,10 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { OrdemServicoInput } from "@/lib/validators/ordem-servico.schema";
 import type { Galpao, MotivoParada } from "../domain/types";
-import {
-  calcularConclusaoDoOrcamento,
-  calcularSubtotalItem,
-} from "@/modules/orcamento/domain/calculo";
+import { calcularSubtotalItem } from "@/modules/orcamento/domain/calculo";
+import { montarHistoricoOs, type HistoricoOs } from "../domain/historico";
 
 type Client = SupabaseClient<Database>;
 
@@ -15,7 +13,7 @@ export interface ValoresConclusao {
 }
 
 const SELECT_QUADRO =
-  "*, cliente(nome, telefone), veiculo(placa, modelo, marca), conta_financeira(status), funcionario(nome)";
+  "*, cliente(nome, telefone), veiculo(placa, modelo, marca, cor), conta_financeira(status), funcionario(nome)";
 
 export async function listarOrdensDoQuadro(supabase: Client) {
   // O quadro é operacional, não um histórico: OS concluídas somem depois de
@@ -68,27 +66,25 @@ export async function valoresConclusaoPorOs(
   supabase: Client
 ): Promise<Record<string, ValoresConclusao>> {
   type Row = {
-    tipo: "peca" | "servico";
-    quantidade: number;
-    preco_unitario: number;
-    desconto: number;
-    orcamento: { ordem_servico_id: string | null; status: string; deleted_at: string | null } | null;
+    ordem_servico_id: string | null;
+    valor_total: number;
+    categoria_financeira: { nome: string } | null;
   };
 
   const { data, error } = await supabase
-    .from("orcamento_item")
-    .select("tipo, quantidade, preco_unitario, desconto, orcamento!inner(ordem_servico_id, status, deleted_at)")
-    .eq("aprovado", true)
-    .in("orcamento.status", ["aprovado", "aprovado_parcial"])
-    .not("orcamento.ordem_servico_id", "is", null)
-    .is("orcamento.deleted_at", null)
+    .from("conta_financeira")
+    .select("ordem_servico_id, valor_total, categoria_financeira!inner(nome)")
+    .eq("tipo", "receber")
+    .in("status", ["aberta", "parcial"])
+    .not("ordem_servico_id", "is", null)
+    .is("deleted_at", null)
     .overrideTypes<Row[], { merge: false }>();
 
   if (error) throw error;
 
   const porOs = new Map<string, Row[]>();
   for (const item of data) {
-    const ordemId = item.orcamento?.ordem_servico_id;
+    const ordemId = item.ordem_servico_id;
     if (!ordemId) continue;
     const lista = porOs.get(ordemId) ?? [];
     lista.push(item);
@@ -97,13 +93,17 @@ export async function valoresConclusaoPorOs(
 
   const resultado: Record<string, ValoresConclusao> = {};
   for (const [ordemId, itens] of porOs) {
-    resultado[ordemId] = calcularConclusaoDoOrcamento(
-      itens.map((i) => ({
-        tipo: i.tipo,
-        quantidade: i.quantidade,
-        precoUnitario: i.preco_unitario,
-        desconto: i.desconto,
-      }))
+    resultado[ordemId] = itens.reduce<ValoresConclusao>(
+      (totais, item) => {
+        const valor = Math.round((item.valor_total + Number.EPSILON) * 100) / 100;
+        if (/pe[çc]a/i.test(item.categoria_financeira?.nome ?? "")) {
+          totais.pecas += valor;
+        } else {
+          totais.servicos += valor;
+        }
+        return totais;
+      },
+      { pecas: 0, servicos: 0 }
     );
   }
   return resultado;
@@ -128,17 +128,42 @@ export async function buscarItensParaConclusao(
     quantidade: number;
     preco_unitario: number;
     desconto: number;
-    orcamento: { ordem_servico_id: string | null; status: string; deleted_at: string | null } | null;
+    orcamento: { deleted_at: string | null } | null;
   };
+
+  const { data: ordem, error: ordemError } = await supabase
+    .from("ordem_servico")
+    .select("orcamento_id")
+    .eq("id", ordemId)
+    .single()
+    .overrideTypes<{ orcamento_id: string | null }, { merge: false }>();
+
+  if (ordemError) throw ordemError;
+
+  let orcamentoId = ordem.orcamento_id;
+  if (!orcamentoId) {
+    const { data: orcamento, error: orcamentoError } = await supabase
+      .from("orcamento")
+      .select("id")
+      .eq("ordem_servico_id", ordemId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle()
+      .overrideTypes<{ id: string } | null, { merge: false }>();
+
+    if (orcamentoError) throw orcamentoError;
+    orcamentoId = orcamento?.id ?? null;
+  }
+
+  if (!orcamentoId) return [];
 
   const { data, error } = await supabase
     .from("orcamento_item")
     .select(
-      "tipo, descricao, quantidade, preco_unitario, desconto, orcamento!inner(ordem_servico_id, status, deleted_at), created_at"
+      "tipo, descricao, quantidade, preco_unitario, desconto, orcamento!inner(deleted_at), created_at"
     )
-    .eq("aprovado", true)
-    .eq("orcamento.ordem_servico_id", ordemId)
-    .in("orcamento.status", ["aprovado", "aprovado_parcial"])
+    .eq("orcamento_id", orcamentoId)
     .is("orcamento.deleted_at", null)
     .order("created_at", { ascending: true })
     .overrideTypes<Row[], { merge: false }>();
@@ -207,6 +232,30 @@ export async function buscarParcelasReceberDaOs(
     saldo: Math.round((p.valor - p.valor_pago - p.desconto) * 100) / 100,
     vencimento: p.vencimento,
   }));
+}
+
+// Histórico completo de OS de um cliente (todos os veículos), com os itens do
+// serviço e o total — alimenta a aba de histórico no perfil do cliente. Lê a
+// OS + o orçamento vinculado; a escolha do orçamento e a soma ficam no domínio
+// (montarHistoricoOs) para serem testáveis.
+export async function buscarHistoricoDoCliente(
+  supabase: Client,
+  clienteId: string
+): Promise<HistoricoOs[]> {
+  const { data, error } = await supabase
+    .from("ordem_servico")
+    .select(
+      "id, numero, status, data_abertura, data_conclusao, queixa, " +
+        "veiculo(id, modelo, marca, placa, cor), funcionario(nome), " +
+        "orcamento(status, orcamento_item(descricao, tipo, quantidade, preco_unitario, desconto, aprovado))"
+    )
+    .eq("cliente_id", clienteId)
+    .is("deleted_at", null)
+    .order("data_abertura", { ascending: false })
+    .overrideTypes<Parameters<typeof montarHistoricoOs>[0], { merge: false }>();
+
+  if (error) throw error;
+  return montarHistoricoOs(data);
 }
 
 export async function marcarClienteAvisado(supabase: Client, id: string) {

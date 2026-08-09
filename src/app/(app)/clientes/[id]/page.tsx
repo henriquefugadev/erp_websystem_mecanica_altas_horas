@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessaoAtual } from "@/lib/supabase/sessao";
 import { buscarClientePorId } from "@/modules/crm/data/cliente.repository";
 import { listarFotos } from "@/modules/crm/data/foto.repository";
+import { buscarHistoricoDoCliente } from "@/modules/patio/data/ordem-servico.repository";
+import { HistoricoOsCliente } from "@/components/crm/historico-os";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +36,8 @@ export default async function ClienteDetalhePage({
       fotos: await listarFotos(supabase, sessao.workshopId, veiculo.id),
     }))
   );
+
+  const historico = await buscarHistoricoDoCliente(supabase, cliente.id);
 
   return (
     <div className="grid max-w-3xl gap-6">
@@ -137,6 +141,11 @@ export default async function ClienteDetalhePage({
           </CardContent>
         </Card>
       ))}
+
+      <div className="flex items-center justify-between">
+        <h2 className="font-heading text-lg">Histórico de serviços</h2>
+      </div>
+      <HistoricoOsCliente historico={historico} />
     </div>
   );
 }
