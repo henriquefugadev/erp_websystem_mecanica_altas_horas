@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { hojeSaoPaulo } from "@/lib/format";
 import {
+  buscarFaturamentoPorCategoria,
   buscarFluxoCaixa,
   buscarInadimplencia,
   buscarResumo,
@@ -14,6 +15,7 @@ import { KpiCards } from "@/components/financeiro/kpi-cards";
 import { ResumoPeriodos } from "@/components/financeiro/resumo-periodos";
 import { FluxoCaixaChart } from "@/components/financeiro/fluxo-caixa-chart";
 import { InadimplenciaPanel } from "@/components/financeiro/inadimplencia-panel";
+import { FaturamentoPanel } from "@/components/financeiro/faturamento-panel";
 
 function trintaDiasAtras(hoje: string): string {
   const data = new Date(`${hoje}T00:00:00Z`);
@@ -32,14 +34,16 @@ export default async function FinanceiroDashboardPage({
   const intervalos = intervalosPadrao(hoje);
 
   const supabase = await createClient();
-  const [resumo, fluxo, inadimplencia, resumoHoje, resumoSemana, resumoMes] = await Promise.all([
-    buscarResumo(supabase, de, ate),
-    buscarFluxoCaixa(supabase, de, ate),
-    buscarInadimplencia(supabase),
-    buscarResumo(supabase, intervalos.hoje.de, intervalos.hoje.ate),
-    buscarResumo(supabase, intervalos.semana.de, intervalos.semana.ate),
-    buscarResumo(supabase, intervalos.mes.de, intervalos.mes.ate),
-  ]);
+  const [resumo, fluxo, inadimplencia, faturamento, resumoHoje, resumoSemana, resumoMes] =
+    await Promise.all([
+      buscarResumo(supabase, de, ate),
+      buscarFluxoCaixa(supabase, de, ate),
+      buscarInadimplencia(supabase),
+      buscarFaturamentoPorCategoria(supabase, de, ate),
+      buscarResumo(supabase, intervalos.hoje.de, intervalos.hoje.ate),
+      buscarResumo(supabase, intervalos.semana.de, intervalos.semana.ate),
+      buscarResumo(supabase, intervalos.mes.de, intervalos.mes.ate),
+    ]);
 
   return (
     <div className="grid gap-6">
@@ -71,6 +75,13 @@ export default async function FinanceiroDashboardPage({
       </div>
 
       {resumo && <KpiCards resumo={resumo} />}
+
+      <div className="grid gap-3">
+        <h2 className="font-heading text-lg text-muted-foreground">
+          Faturamento por tipo (no período)
+        </h2>
+        <FaturamentoPanel faturamento={faturamento} />
+      </div>
 
       <Card>
         <CardHeader>

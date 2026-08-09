@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import {
+  classificarFaturamento,
+  type FaturamentoResumo,
+} from "@/modules/financeiro/domain/faturamento";
 
 type Client = SupabaseClient<Database>;
 
@@ -30,6 +34,27 @@ export async function buscarFluxoCaixa(
 
   if (error) throw error;
   return preencherDiasFaltantes(de, ate, data ?? []);
+}
+
+export async function buscarFaturamentoPorCategoria(
+  supabase: Client,
+  de: string,
+  ate: string
+): Promise<FaturamentoResumo> {
+  const { data, error } = await supabase.rpc("financeiro_faturamento_por_categoria", {
+    p_de: de,
+    p_ate: ate,
+  });
+
+  if (error) throw error;
+
+  return classificarFaturamento(
+    (data ?? []).map((linha) => ({
+      categoriaId: linha.categoria_id,
+      categoriaNome: linha.categoria_nome,
+      total: Number(linha.total),
+    }))
+  );
 }
 
 export async function buscarInadimplencia(supabase: Client) {
