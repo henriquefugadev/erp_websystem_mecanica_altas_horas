@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -62,6 +63,15 @@ export default function LoginPage() {
               Entrar
             </Button>
           </form>
+
+          <div className="mt-4 flex flex-col items-center gap-2 text-sm">
+            <Link href="/esqueci-senha" className="text-muted-foreground hover:underline">
+              Esqueci a senha
+            </Link>
+            <Link href="/cadastro" className="text-muted-foreground hover:underline">
+              Criar cadastro
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>
