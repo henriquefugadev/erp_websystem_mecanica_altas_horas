@@ -38,6 +38,8 @@ export async function atualizarConfiguracao(
       cidade: dados.cidade || null,
       estado: dados.estado || null,
       condicoes_pagamento_padrao: dados.condicoesPagamentoPadrao || null,
+      chave_pix: dados.chavePix || null,
+      pix_favorecido: dados.pixFavorecido || null,
       validade_orcamento_dias: dados.validadeOrcamentoDias,
       markup_peca_percentual: dados.markupPecaPercentual,
       valor_hora_mao_obra: dados.valorHoraMaoObra,

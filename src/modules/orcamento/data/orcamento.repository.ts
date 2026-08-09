@@ -44,7 +44,7 @@ function mapItensDiagnostico(itens: DiagnosticoOutput["itens"]) {
 const SELECT_LISTA = "*, cliente(nome), veiculo(placa, modelo, marca)";
 
 const SELECT_DETALHE =
-  "*, cliente(nome, telefone), veiculo(placa, modelo, marca, ano), " +
+  "*, cliente(nome, telefone), veiculo(placa, modelo, marca, ano, cor, quilometragem), " +
   "orcamento_item(*), ordem_servico(numero)";
 
 export async function listarOrcamentos(supabase: Client) {
@@ -58,19 +58,39 @@ export async function listarOrcamentos(supabase: Client) {
   return data;
 }
 
-export async function buscarOrcamentoPorId(supabase: Client, id: string) {
+// Calcula o status "efetivo" (a mesma regra da view vw_orcamento): um orçamento
+// enviado cuja validade já passou aparece como "expirado". Feito em JS porque a
+// busca de detalhe lê da TABELA base, não da view — o embedding de relações
+// (orcamento_item, ordem_servico) via PostgREST em cima de uma view é frágil e
+// era a causa do "Orçamento não encontrado" ao baixar o PDF de um rascunho.
+function calcularStatusEfetivo(
+  status: OrcamentoComRelacoes["status"],
+  validade: string
+): OrcamentoComRelacoes["status_efetivo"] {
+  if (status === "enviado" && validade < new Date().toISOString().slice(0, 10)) {
+    return "expirado";
+  }
+  return status;
+}
+
+export async function buscarOrcamentoPorId(
+  supabase: Client,
+  id: string
+): Promise<OrcamentoComRelacoes> {
   const { data, error } = await supabase
-    .from("vw_orcamento")
+    .from("orcamento")
     .select(SELECT_DETALHE)
     .eq("id", id)
-    // Numeração dos itens (tela, PDF e WhatsApp) precisa ser sempre a mesma
-    // ordem — created_at é a ordem em que foram lançados.
-    .order("created_at", { referencedTable: "orcamento_item", ascending: true })
+    .is("deleted_at", null)
     .single()
-    .overrideTypes<OrcamentoComRelacoes, { merge: false }>();
+    .overrideTypes<Omit<OrcamentoComRelacoes, "status_efetivo">, { merge: false }>();
 
   if (error) throw error;
-  return data;
+  return {
+    ...data,
+    orcamento_item: [...data.orcamento_item].sort((a, b) => a.created_at.localeCompare(b.created_at)),
+    status_efetivo: calcularStatusEfetivo(data.status, data.validade),
+  };
 }
 
 export async function criarOrcamento(

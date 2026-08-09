@@ -74,6 +74,8 @@ export interface Database {
           markup_habilitado: boolean;
           nav_ocultos: string[];
           logo_path: string | null;
+          chave_pix: string | null;
+          pix_favorecido: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -99,6 +101,8 @@ export interface Database {
           markup_habilitado?: boolean;
           nav_ocultos?: string[];
           logo_path?: string | null;
+          chave_pix?: string | null;
+          pix_favorecido?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["workshop"]["Insert"]>;
         Relationships: [];
@@ -1058,6 +1062,10 @@ export interface Database {
           pago_periodo: number;
           total_inadimplente: number;
         }[];
+      };
+      financeiro_faturamento_por_categoria: {
+        Args: { p_de: string; p_ate: string };
+        Returns: { categoria_id: string; categoria_nome: string; total: number }[];
       };
       concluir_ordem_servico: {
         Args: {

@@ -40,6 +40,8 @@ function valoresIniciais(workshop: Workshop): WorkshopFormValues {
     cidade: workshop.cidade ?? "",
     estado: workshop.estado ?? "",
     condicoesPagamentoPadrao: workshop.condicoes_pagamento_padrao ?? "",
+    chavePix: workshop.chave_pix ?? "",
+    pixFavorecido: workshop.pix_favorecido ?? "",
     validadeOrcamentoDias: workshop.validade_orcamento_dias,
     markupPecaPercentual: workshop.markup_peca_percentual,
     valorHoraMaoObra: workshop.valor_hora_mao_obra,
@@ -308,6 +310,25 @@ export function ConfiguracoesForm({
               {errors.validadeOrcamentoDias && (
                 <Erro msg={errors.validadeOrcamentoDias.message} />
               )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-1.5">
+                <Label htmlFor="chavePix">Chave PIX</Label>
+                <Input
+                  id="chavePix"
+                  placeholder="Ex.: 64996488838"
+                  {...form.register("chavePix")}
+                />
+                <p className="text-xs text-muted-foreground">Aparece no rodapé do PDF da OS.</p>
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="pixFavorecido">Favorecido do PIX</Label>
+                <Input
+                  id="pixFavorecido"
+                  placeholder="Ex.: MECÂNICA ALTAS HORAS (NUBANK)"
+                  {...form.register("pixFavorecido")}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>

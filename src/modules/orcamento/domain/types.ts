@@ -17,7 +17,14 @@ export const STATUS_ORCAMENTO_LABEL: Record<StatusOrcamentoEfetivo, string> = {
 
 export type OrcamentoComRelacoes = VwOrcamento & {
   cliente: { nome: string; telefone: string } | null;
-  veiculo: { placa: string; modelo: string; marca: string | null; ano: number | null } | null;
+  veiculo: {
+    placa: string;
+    modelo: string;
+    marca: string | null;
+    ano: number | null;
+    cor: string | null;
+    quilometragem: number | null;
+  } | null;
   orcamento_item: OrcamentoItem[];
   ordem_servico: { numero: number } | null;
 };
