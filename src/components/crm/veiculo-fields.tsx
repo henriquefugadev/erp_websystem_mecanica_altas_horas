@@ -5,6 +5,7 @@ import type { VeiculoFormValues } from "./veiculo-form-schema";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Erro } from "@/components/ui/erro";
 
 export function VeiculoFields({
   register,
@@ -62,6 +63,3 @@ export function VeiculoFields({
   );
 }
 
-function Erro({ msg }: { msg?: string }) {
-  return <p className="text-sm text-destructive">{msg}</p>;
-}

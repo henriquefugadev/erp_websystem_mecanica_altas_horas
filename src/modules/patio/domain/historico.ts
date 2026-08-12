@@ -18,9 +18,11 @@ export interface HistoricoItem {
 export interface HistoricoOs {
   id: string;
   numero: number;
+  titulo: string | null;
   status: StatusOS;
   dataAbertura: string;
   dataConclusao: string | null;
+  garantiaAte: string | null;
   queixa: string | null;
   funcionario: string | null;
   veiculo: { id: string; nome: string; placa: string; cor: string | null } | null;
@@ -48,9 +50,11 @@ interface OrcamentoRaw {
 export interface OrdemHistoricoRaw {
   id: string;
   numero: number;
+  titulo: string | null;
   status: StatusOS;
   data_abertura: string;
   data_conclusao: string | null;
+  garantia_ate: string | null;
   queixa: string | null;
   veiculo: {
     id: string;
@@ -101,9 +105,11 @@ export function montarHistoricoOs(ordens: OrdemHistoricoRaw[]): HistoricoOs[] {
     return {
       id: ordem.id,
       numero: ordem.numero,
+      titulo: ordem.titulo,
       status: ordem.status,
       dataAbertura: ordem.data_abertura,
       dataConclusao: ordem.data_conclusao,
+      garantiaAte: ordem.garantia_ate,
       queixa: ordem.queixa,
       funcionario: ordem.funcionario?.nome ?? null,
       veiculo: ordem.veiculo

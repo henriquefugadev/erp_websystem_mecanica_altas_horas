@@ -13,13 +13,17 @@ export default function CadastroPage() {
         </CardHeader>
         <CardContent className="grid gap-4 text-sm">
           <p>
-            As contas de acesso são criadas pelo administrador da oficina, em{" "}
-            <strong>Funcionários</strong>. Isso mantém o controle de quem pode ver e alterar os
-            dados.
+            As contas de acesso são criadas pelo <strong>administrador da oficina</strong>. Não há
+            cadastro aberto: controlar quem entra e quem altera dado é o motivo deste sistema
+            existir.
           </p>
           <p className="text-muted-foreground">
-            Precisa de acesso? Peça ao responsável (administrador) para cadastrar o seu e-mail. Você
-            receberá uma senha e poderá trocá-la depois em &ldquo;Esqueci a senha&rdquo;.
+            Precisa de acesso? Peça ao responsável para liberar o seu e-mail. Você recebe uma senha
+            e pode trocá-la depois em &ldquo;Esqueci a senha&rdquo;.
+          </p>
+          <p className="text-muted-foreground">
+            O cadastro em <strong>Funcionários</strong> é outra coisa: registra quem trabalha na
+            oficina (para atribuir OS), não cria login.
           </p>
           <Link href="/login" className={buttonVariants({ variant: "outline" })}>
             Voltar para o login

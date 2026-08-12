@@ -14,7 +14,16 @@ export default async function AppLayout({
   const sessao = await getSessaoAtual();
 
   if (!sessao) {
-    redirect("/login");
+    // Duas causas diferentes caem aqui. Sem sessão de verdade, o middleware já
+    // teria mandado para /login — então, se chegou até este ponto, quase sempre
+    // é o outro caso: a pessoa existe no Supabase Auth mas não tem linha em
+    // `usuario`/`usuario_workshop`. Antes os dois viravam um redirect mudo, e
+    // ela reentrava no loop sem nunca ver o motivo.
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    redirect(user ? "/login?erro=sem-oficina" : "/login");
   }
 
   const supabase = await createClient();

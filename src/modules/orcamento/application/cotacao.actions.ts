@@ -11,8 +11,9 @@ import {
 import { buscarConfiguracao } from "@/modules/workshop/data/workshop.repository";
 import { aplicarMarkup } from "@/modules/orcamento/domain/calculo";
 import { mensagemDeErro } from "@/modules/financeiro/application/erros";
+import type { ActionResult } from "@/lib/action-result";
 
-export type ActionResult<T> = { ok: true; data: T } | { ok: false; erro: string };
+export type { ActionResult };
 
 // Salva as cotações digitadas de uma vez. O preço de venda é calculado aqui
 // (servidor) com o markup da oficina — o cliente nunca manda o preço, só o

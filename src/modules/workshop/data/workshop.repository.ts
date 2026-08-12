@@ -1,6 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { WorkshopInput } from "@/lib/validators/workshop.schema";
+import {
+  parametrosPatio,
+  type FonteParametros,
+  type ParametrosPatio,
+} from "../domain/parametros";
 
 type Client = SupabaseClient<Database>;
 
@@ -15,6 +20,44 @@ export async function buscarConfiguracao(supabase: Client, workshopId: string) {
 
   if (error) throw error;
   return data;
+}
+
+// Só as colunas de parametrização — o pátio precisa delas em toda abertura e
+// não tem por que arrastar endereço, CNPJ, logo e PIX junto.
+const COLUNAS_PARAMETROS =
+  "galpoes_quantidade, galpao_capacidade, galpao_nomes, sla_aguardando_horas, " +
+  "sla_confirmacao_horas, sla_execucao_horas, sla_parado_horas, " +
+  "garantia_meses_padrao, dias_os_concluida_quadro, categoria_peca_id, categoria_mao_obra_id";
+
+/**
+ * Parâmetros operacionais da oficina, já com os padrões aplicados.
+ *
+ * Falha de leitura NÃO derruba a tela: cai nos padrões históricos, que são
+ * exatamente o comportamento anterior à parametrização. Isso cobre o intervalo
+ * entre publicar o código e rodar a migração 0023 no Supabase — sem isso, o
+ * pátio inteiro quebraria com "column does not exist" até a migração rodar.
+ */
+export async function buscarParametros(
+  supabase: Client,
+  workshopId: string
+): Promise<ParametrosPatio> {
+  const { data, error } = await supabase
+    .from("workshop")
+    .select(COLUNAS_PARAMETROS)
+    .eq("id", workshopId)
+    .maybeSingle()
+    // A lista de colunas é uma constante montada em runtime, então o
+    // supabase-js não consegue inferir a forma da linha sozinho.
+    .overrideTypes<FonteParametros | null, { merge: false }>();
+
+  if (error) {
+    console.warn(
+      "[workshop] não foi possível ler os parâmetros (a migração 0023 já rodou?):",
+      error.message
+    );
+    return parametrosPatio(null);
+  }
+  return parametrosPatio(data);
 }
 
 export async function atualizarConfiguracao(
@@ -45,6 +88,17 @@ export async function atualizarConfiguracao(
       valor_hora_mao_obra: dados.valorHoraMaoObra,
       markup_habilitado: dados.markupHabilitado,
       nav_ocultos: dados.navOcultos,
+      galpoes_quantidade: dados.galpoesQuantidade,
+      galpao_capacidade: dados.galpaoCapacidade,
+      galpao_nomes: dados.galpaoNomes,
+      sla_aguardando_horas: dados.slaAguardandoHoras,
+      sla_confirmacao_horas: dados.slaConfirmacaoHoras,
+      sla_execucao_horas: dados.slaExecucaoHoras,
+      sla_parado_horas: dados.slaParadoHoras,
+      garantia_meses_padrao: dados.garantiaMesesPadrao,
+      dias_os_concluida_quadro: dados.diasOsConcluidaQuadro,
+      categoria_peca_id: dados.categoriaPecaId || null,
+      categoria_mao_obra_id: dados.categoriaMaoObraId || null,
     })
     .eq("id", workshopId)
     .select()

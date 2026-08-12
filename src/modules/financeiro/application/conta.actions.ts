@@ -2,20 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getSessaoAtual } from "@/lib/supabase/sessao";
 import { contaSchema, type ContaInput } from "@/lib/validators/financeiro.schema";
-import { cancelarConta, criarConta } from "@/modules/financeiro/data/conta.repository";
+import { cancelarConta, criarConta, excluirConta } from "@/modules/financeiro/data/conta.repository";
 import { mensagemDeErro } from "./erros";
+import { exigirAdmin, exigirSessao, type ActionResult } from "@/lib/action-result";
 
-export type ActionResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; erro: string };
+export type { ActionResult };
 
 export async function criarContaAction(
   entrada: unknown
 ): Promise<ActionResult<{ id: string }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = contaSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -24,7 +22,12 @@ export async function criarContaAction(
 
   const supabase = await createClient();
   try {
-    const id = await criarConta(supabase, sessao.workshopId, sessao.usuarioId, parsed.data);
+    const id = await criarConta(
+      supabase,
+      guard.sessao.workshopId,
+      guard.sessao.usuarioId,
+      parsed.data
+    );
     revalidatePath("/financeiro/contas");
     revalidatePath("/financeiro");
     return { ok: true, data: { id } };
@@ -33,9 +36,12 @@ export async function criarContaAction(
   }
 }
 
+// Cancelar é operação do dia a dia (a conta continua na lista, com status
+// Cancelada) — qualquer usuário logado pode. Só excluir, que tira da vista, é
+// restrito ao admin.
 export async function cancelarContaAction(id: string): Promise<ActionResult<null>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const supabase = await createClient();
   try {
@@ -46,6 +52,25 @@ export async function cancelarContaAction(id: string): Promise<ActionResult<null
     return { ok: true, data: null };
   } catch (e) {
     return { ok: false, erro: mensagemDeErro(e, "Não foi possível cancelar. Tente novamente.") };
+  }
+}
+
+// Excluir some com o lançamento da lista, do detalhe e do dashboard. É a única
+// operação do financeiro que apaga informação da vista da oficina, então fica
+// com o Jadson — a RLS não distingue papel aqui, essa é a barreira.
+export async function excluirContaAction(id: string): Promise<ActionResult<null>> {
+  const guard = await exigirAdmin("excluir lançamentos do financeiro");
+  if (!guard.ok) return guard;
+
+  const supabase = await createClient();
+  try {
+    await excluirConta(supabase, id);
+    revalidatePath("/financeiro/contas");
+    revalidatePath(`/financeiro/contas/${id}`);
+    revalidatePath("/financeiro");
+    return { ok: true, data: null };
+  } catch (e) {
+    return { ok: false, erro: mensagemDeErro(e, "Não foi possível excluir. Tente novamente.") };
   }
 }
 

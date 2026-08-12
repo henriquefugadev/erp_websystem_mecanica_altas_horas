@@ -219,6 +219,7 @@ export function CotacoesForm({
                       key={w.fid}
                       size="sm"
                       variant="outline"
+                      nativeButton={false}
                       render={<a href={w.link} target="_blank" rel="noopener noreferrer" />}
                     >
                       <MessageCircle className="size-4" />

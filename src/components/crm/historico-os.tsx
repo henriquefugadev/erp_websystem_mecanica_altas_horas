@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatarData, formatarDinheiro, formatarPlaca } from "@/lib/format";
+import { formatarData, formatarDinheiro, formatarPlaca, hojeSaoPaulo } from "@/lib/format";
 import { STATUS_OS_LABEL } from "@/modules/patio/domain/types";
 import type { HistoricoOs } from "@/modules/patio/domain/historico";
 
@@ -15,15 +15,36 @@ export function HistoricoOsCliente({ historico }: { historico: HistoricoOs[] }) 
     );
   }
 
+  const hoje = hojeSaoPaulo();
+
   return (
     <div className="grid gap-4">
-      {historico.map((os) => (
+      {historico.map((os) => {
+        const garantiaVigente = os.garantiaAte !== null && os.garantiaAte >= hoje;
+        return (
         <Card key={os.id}>
           <CardHeader className="grid gap-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className="font-heading text-base">OS #{os.numero}</span>
+                <span className="font-heading text-base">
+                  OS #{os.numero}
+                  {os.titulo ? ` — ${os.titulo}` : ""}
+                </span>
                 <Badge variant="outline">{STATUS_OS_LABEL[os.status]}</Badge>
+                {os.garantiaAte && (
+                  <Badge
+                    variant="outline"
+                    className={
+                      garantiaVigente
+                        ? "border-fin-entrada/30 bg-fin-entrada/10 text-fin-entrada"
+                        : "text-muted-foreground"
+                    }
+                  >
+                    {garantiaVigente
+                      ? `Garantia até ${formatarData(os.garantiaAte)}`
+                      : `Garantia vencida (${formatarData(os.garantiaAte)})`}
+                  </Badge>
+                )}
                 {!os.aprovado && os.itens.length > 0 && (
                   <Badge variant="outline" className="text-muted-foreground">
                     Orçamento (não aprovado)
@@ -71,7 +92,8 @@ export function HistoricoOsCliente({ historico }: { historico: HistoricoOs[] }) 
             )}
           </CardContent>
         </Card>
-      ))}
+        );
+      })}
     </div>
   );
 }

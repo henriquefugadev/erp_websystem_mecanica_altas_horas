@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Erro } from "@/components/ui/erro";
 
 interface Opcao {
   id: string;
@@ -130,8 +131,8 @@ export function ContaFields({
         </div>
       ) : (
         <div className="grid gap-1.5">
-          <Label htmlFor="fornecedorNome" required>Fornecedor</Label>
-          <Input id="fornecedorNome" {...register("fornecedorNome")} />
+          <Label htmlFor="fornecedorNome">Fornecedor (opcional)</Label>
+          <Input id="fornecedorNome" placeholder="Nome do fornecedor" {...register("fornecedorNome")} />
           {errors.fornecedorNome && <Erro msg={errors.fornecedorNome.message} />}
         </div>
       )}
@@ -162,6 +163,3 @@ export function ContaFields({
   );
 }
 
-function Erro({ msg }: { msg?: string }) {
-  return <p className="text-sm text-destructive">{msg}</p>;
-}

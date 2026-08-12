@@ -141,6 +141,9 @@ export function OrcamentoPdf({
     .filter(Boolean)
     .join(", ");
   const telefone = workshop.telefone ? formatarTelefone(workshop.telefone) : null;
+  // Técnico responsável pela OS de origem, quando houver — vai em "Serviço
+  // feito por". Orçamento avulso (sem OS) fica só com o rótulo, como antes.
+  const tecnico = orcamento.ordem_servico?.funcionario?.nome ?? null;
 
   // Peças entram como linhas individuais; serviços são somados numa única linha
   // "MÃO DE OBRA", como no modelo em papel da oficina.
@@ -189,6 +192,7 @@ export function OrcamentoPdf({
             </View>
             <View style={styles.servicoBox}>
               <Text style={styles.servicoLabel}>SERVIÇO FEITO POR:</Text>
+              {tecnico && <Text style={styles.servicoNome}>{tecnico}</Text>}
             </View>
           </View>
         </View>

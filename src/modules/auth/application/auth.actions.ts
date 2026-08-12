@@ -4,6 +4,11 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
+// Tela inicial depois de entrar. É o Pátio porque é de onde a Michele trabalha
+// o dia inteiro — e é para lá que a raiz "/" já aponta. Antes caía em
+// /clientes, que é consulta, não operação.
+const DESTINO_APOS_LOGIN = "/patio";
+
 export async function loginAction(
   entrada: unknown
 ): Promise<{ ok: true } | { ok: false; erro: string }> {
@@ -23,7 +28,7 @@ export async function loginAction(
     return { ok: false, erro: "E-mail ou senha inválidos." };
   }
 
-  redirect("/clientes");
+  redirect(DESTINO_APOS_LOGIN);
 }
 
 export async function logoutAction() {
@@ -77,5 +82,5 @@ export async function redefinirSenhaAction(
     };
   }
 
-  redirect("/clientes");
+  redirect(DESTINO_APOS_LOGIN);
 }

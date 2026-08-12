@@ -1,8 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database, FormaPagamento, StatusOS } from "@/lib/supabase/database.types";
 import type { OrdemServicoInput } from "@/lib/validators/ordem-servico.schema";
 import type { Galpao, MotivoParada } from "../domain/types";
 import { calcularSubtotalItem } from "@/modules/orcamento/domain/calculo";
+import {
+  ehCategoriaDePeca,
+  parametrosPatio,
+  PARAMETROS_PADRAO,
+  type ParametrosPatio,
+} from "@/modules/workshop/domain/parametros";
 import { montarHistoricoOs, type HistoricoOs } from "../domain/historico";
 
 type Client = SupabaseClient<Database>;
@@ -15,18 +21,44 @@ export interface ValoresConclusao {
 const SELECT_QUADRO =
   "*, cliente(nome, telefone), veiculo(placa, modelo, marca, cor), conta_financeira(status), funcionario(nome)";
 
-export async function listarOrdensDoQuadro(supabase: Client) {
-  // O quadro é operacional, não um histórico: OS concluídas somem depois de
-  // 7 dias (continuam no banco/relatórios, só saem da visão do dia a dia).
-  const seteDiasAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+export async function listarOrdensDoQuadro(
+  supabase: Client,
+  diasOsConcluida: number = PARAMETROS_PADRAO.diasOsConcluidaQuadro
+) {
+  // O quadro é operacional, não um histórico: OS concluídas somem depois de N
+  // dias (continuam no banco/relatórios, só saem da visão do dia a dia).
+  const corte = new Date(Date.now() - diasOsConcluida * 24 * 60 * 60 * 1000).toISOString();
 
   const { data, error } = await supabase
     .from("ordem_servico")
     .select(SELECT_QUADRO)
     .is("deleted_at", null)
     .neq("status", "cancelada")
-    .or(`status.neq.concluido,data_conclusao.gte.${seteDiasAtras}`)
+    .or(`status.neq.concluido,data_conclusao.gte.${corte}`)
     .order("numero", { ascending: true });
+
+  if (error) throw error;
+
+  // OS arquivada manualmente sai do quadro na hora (mesmo efeito da limpeza dos
+  // N dias, só que sob demanda). O filtro é feito aqui, e não na query, para o
+  // quadro não quebrar entre publicar o código e rodar a migração 0025: sem a
+  // coluna, `arquivada_em` vem undefined e a OS é tratada como não arquivada.
+  return data.filter((ordem) => ordem.arquivada_em == null);
+}
+
+// Só `galpao` e `status` — é tudo que a conta de lotação precisa. Antes,
+// iniciar/liberar uma OS recarregava o QUADRO INTEIRO (com cliente, veículo,
+// contas e funcionário embutidos) só para escolher a baia menos cheia.
+export async function listarOcupacaoGalpoes(
+  supabase: Client
+): Promise<{ galpao: number | null; status: StatusOS }[]> {
+  const { data, error } = await supabase
+    .from("ordem_servico")
+    .select("galpao, status")
+    .is("deleted_at", null)
+    .in("status", ["em_execucao", "parado", "aguardando_confirmacao"])
+    .not("galpao", "is", null)
+    .overrideTypes<{ galpao: number | null; status: StatusOS }[], { merge: false }>();
 
   if (error) throw error;
   return data;
@@ -63,17 +95,19 @@ export async function contarDiagnosticoPorOs(
 // vinculado, separados por tipo (peças e serviços) — pré-preenche a conclusão
 // e serve de total no aviso "carro pronto". Uma query para o quadro inteiro.
 export async function valoresConclusaoPorOs(
-  supabase: Client
+  supabase: Client,
+  parametros: ParametrosPatio = parametrosPatio(null)
 ): Promise<Record<string, ValoresConclusao>> {
   type Row = {
     ordem_servico_id: string | null;
     valor_total: number;
+    categoria_id: string | null;
     categoria_financeira: { nome: string } | null;
   };
 
   const { data, error } = await supabase
     .from("conta_financeira")
-    .select("ordem_servico_id, valor_total, categoria_financeira!inner(nome)")
+    .select("ordem_servico_id, valor_total, categoria_id, categoria_financeira!inner(nome)")
     .eq("tipo", "receber")
     .in("status", ["aberta", "parcial"])
     .not("ordem_servico_id", "is", null)
@@ -82,29 +116,21 @@ export async function valoresConclusaoPorOs(
 
   if (error) throw error;
 
-  const porOs = new Map<string, Row[]>();
+  const resultado: Record<string, ValoresConclusao> = {};
   for (const item of data) {
     const ordemId = item.ordem_servico_id;
     if (!ordemId) continue;
-    const lista = porOs.get(ordemId) ?? [];
-    lista.push(item);
-    porOs.set(ordemId, lista);
-  }
 
-  const resultado: Record<string, ValoresConclusao> = {};
-  for (const [ordemId, itens] of porOs) {
-    resultado[ordemId] = itens.reduce<ValoresConclusao>(
-      (totais, item) => {
-        const valor = Math.round((item.valor_total + Number.EPSILON) * 100) / 100;
-        if (/pe[çc]a/i.test(item.categoria_financeira?.nome ?? "")) {
-          totais.pecas += valor;
-        } else {
-          totais.servicos += valor;
-        }
-        return totais;
-      },
-      { pecas: 0, servicos: 0 }
+    const totais = (resultado[ordemId] ??= { pecas: 0, servicos: 0 });
+    const valor = Math.round((item.valor_total + Number.EPSILON) * 100) / 100;
+    // Categoria escolhida nas Configurações manda; sem escolha, decide pelo
+    // nome — o critério antigo, para não mudar número de quem não configurou.
+    const ehPeca = ehCategoriaDePeca(
+      { id: item.categoria_id, nome: item.categoria_financeira?.nome ?? null },
+      parametros
     );
+    if (ehPeca) totais.pecas += valor;
+    else totais.servicos += valor;
   }
   return resultado;
 }
@@ -234,6 +260,28 @@ export async function buscarParcelasReceberDaOs(
   }));
 }
 
+// Quita todas as parcelas a receber em aberto da OS de uma vez. O laço vive
+// dentro da função do banco (0026), então é uma transação só: ou tudo é
+// lançado, ou nada — o laço equivalente na aplicação deixava metade dos
+// pagamentos gravados quando uma parcela falhava no meio.
+export async function receberParcelasDaOs(
+  supabase: Client,
+  ordemId: string,
+  usuarioId: string,
+  dados: { dataPagamento: string; formaPagamento: FormaPagamento; observacoes: string | null }
+): Promise<number> {
+  const { data, error } = await supabase.rpc("receber_parcelas_da_os", {
+    p_ordem_id: ordemId,
+    p_data_pagamento: dados.dataPagamento,
+    p_forma_pagamento: dados.formaPagamento,
+    p_observacoes: dados.observacoes,
+    p_created_by: usuarioId,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
 // Histórico completo de OS de um cliente (todos os veículos), com os itens do
 // serviço e o total — alimenta a aba de histórico no perfil do cliente. Lê a
 // OS + o orçamento vinculado; a escolha do orçamento e a soma ficam no domínio
@@ -245,9 +293,13 @@ export async function buscarHistoricoDoCliente(
   const { data, error } = await supabase
     .from("ordem_servico")
     .select(
-      "id, numero, status, data_abertura, data_conclusao, queixa, " +
+      "id, numero, titulo, status, data_abertura, data_conclusao, garantia_ate, queixa, " +
         "veiculo(id, modelo, marca, placa, cor), funcionario(nome), " +
-        "orcamento(status, orcamento_item(descricao, tipo, quantidade, preco_unitario, desconto, aprovado))"
+        // Há duas FKs entre ordem_servico e orcamento (orcamento.ordem_servico_id
+        // e ordem_servico.orcamento_id). Sem fixar a FK, o PostgREST não sabe qual
+        // usar e devolve PGRST201 (embed ambíguo). Aqui queremos todos os orçamentos
+        // criados PARA esta OS -> orcamento.ordem_servico_id.
+        "orcamento!orcamento_ordem_servico_id_fkey(status, orcamento_item(descricao, tipo, quantidade, preco_unitario, desconto, aprovado))"
     )
     .eq("cliente_id", clienteId)
     .is("deleted_at", null)
@@ -300,6 +352,26 @@ export async function criarOrdem(
 
   if (error) throw error;
   return data;
+}
+
+// Edita os campos operacionais da OS (queixa, observações, técnico). Não mexe
+// em status/galpão nem em cliente/veículo — esses seguem seus próprios fluxos.
+export async function atualizarOrdem(
+  supabase: Client,
+  id: string,
+  dados: { titulo: string; queixa: string; descricao: string; funcionarioId: string }
+) {
+  const { error } = await supabase
+    .from("ordem_servico")
+    .update({
+      titulo: dados.titulo || null,
+      queixa: dados.queixa || null,
+      descricao: dados.descricao || null,
+      funcionario_id: dados.funcionarioId || null,
+    })
+    .eq("id", id);
+
+  if (error) throw error;
 }
 
 export async function iniciarOrdem(supabase: Client, id: string, galpao: Galpao) {
@@ -377,6 +449,30 @@ export async function cancelarOrdem(supabase: Client, id: string) {
   const { error } = await supabase
     .from("ordem_servico")
     .update({ status: "cancelada" })
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+// Arquiva uma OS concluída: some do quadro imediatamente, sem esperar os N dias
+// da limpeza automática. Só ocultação — a OS segue no banco, no histórico e nos
+// relatórios (nada aqui mexe em deleted_at).
+export async function arquivarOrdem(supabase: Client, id: string) {
+  const { error } = await supabase
+    .from("ordem_servico")
+    .update({ arquivada_em: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+// Desfaz o arquivamento: a OS volta a aparecer no quadro. Existe porque
+// arquivar tira o card da tela na hora e, sem isto, um clique errado não teria
+// volta por nenhum caminho da interface.
+export async function desarquivarOrdem(supabase: Client, id: string) {
+  const { error } = await supabase
+    .from("ordem_servico")
+    .update({ arquivada_em: null })
     .eq("id", id);
 
   if (error) throw error;

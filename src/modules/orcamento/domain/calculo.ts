@@ -21,6 +21,22 @@ export function calcularTotalOrcamento(itens: ItemCalculavel[]): number {
   return arredondarCentavos(total);
 }
 
+// No popup de orçamento do pátio, a Michele digita o PREÇO como total da linha
+// (o valor cheio daquela linha), mas o banco/PDF guardam o preço UNITÁRIO. Estas
+// duas funções convertem entre os dois: total → unitário na hora de salvar,
+// unitário → total na hora de exibir um rascunho já salvo. Quando a quantidade
+// não divide o total em centavos exatos, o unitário arredondado pode reintroduzir
+// alguns centavos de diferença ao recompor (qtd × unitário) — é o trade-off
+// aceito por manter o resto do sistema em preço unitário.
+export function totalDaLinhaParaUnitario(precoLinha: number, quantidade: number): number {
+  if (quantidade <= 0) return arredondarCentavos(precoLinha);
+  return arredondarCentavos(precoLinha / quantidade);
+}
+
+export function unitarioParaTotalDaLinha(precoUnitario: number, quantidade: number): number {
+  return arredondarCentavos(precoUnitario * Math.max(0, quantidade));
+}
+
 // Preço de venda sugerido a partir do custo cotado e do markup (%) da oficina:
 // custo × (1 + markup/100), arredondado ao centavo. Fonte única da regra — a
 // RPC salvar_cotacoes (0014) só grava o valor calculado aqui, não recalcula.

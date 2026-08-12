@@ -9,10 +9,9 @@ import {
   criarFuncionario,
   softDeleteFuncionario,
 } from "@/modules/funcionarios/data/funcionario.repository";
+import type { ActionResult } from "@/lib/action-result";
 
-export type ActionResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; erro: string };
+export type { ActionResult };
 
 export async function criarFuncionarioAction(
   entrada: unknown

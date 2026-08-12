@@ -102,7 +102,7 @@ export function EntradaForm() {
             <Plus className="size-5" />
             Registrar outro veículo
           </Button>
-          <Button size="lg" variant="outline" render={<Link href="/patio" />}>
+          <Button size="lg" variant="outline" nativeButton={false} render={<Link href="/patio" />}>
             Ir para o Pátio
           </Button>
         </div>

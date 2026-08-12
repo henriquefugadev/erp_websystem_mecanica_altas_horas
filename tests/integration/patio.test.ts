@@ -185,6 +185,43 @@ describe("Pátio — ordem de serviço", () => {
     expect(rows[0].galpao).toBe(2);
   });
 
+  it("concluir_ordem_servico usa a garantia configurada na oficina e a carimba na OS", async () => {
+    // A oficina B passa a dar 12 meses; a A continua no padrão (coberto pelo
+    // teste seguinte). Garante que a RPC lê workshop.garantia_meses_padrao em
+    // vez do 3 que ficava fixo no código do dialog.
+    await db.query(`update public.workshop set garantia_meses_padrao = 12 where id = $1`, [
+      oficinaB.workshopId,
+    ]);
+
+    const os = await abrirOrdem(
+      oficinaB.workshopId,
+      oficinaB.usuarioId,
+      clienteVeiculoB.clienteId,
+      clienteVeiculoB.veiculoId
+    );
+
+    await asUser(db, oficinaB.usuarioId, (tx) =>
+      tx.query(`select public.concluir_ordem_servico($1, null, null, $2)`, [
+        os.id,
+        oficinaB.usuarioId,
+      ])
+    );
+
+    const { rows } = await db.query<{ garantia_meses: number; garantia_ate: string | null }>(
+      `select garantia_meses, garantia_ate from public.ordem_servico where id = $1`,
+      [os.id]
+    );
+    // O valor aplicado fica gravado na OS — mudar a config depois não reescreve
+    // a garantia de quem já foi concluído.
+    expect(rows[0].garantia_meses).toBe(12);
+
+    const UM_DIA = 24 * 60 * 60 * 1000;
+    const garantia = new Date(rows[0].garantia_ate as unknown as string);
+    const dias = Math.round((garantia.getTime() - Date.now()) / UM_DIA);
+    expect(dias).toBeGreaterThanOrEqual(363);
+    expect(dias).toBeLessThanOrEqual(367);
+  });
+
   it("concluir_ordem_servico com itens gera uma conta a receber por item, ligada à OS", async () => {
     const os = await abrirOrdem(
       oficinaA.workshopId,
@@ -210,9 +247,23 @@ describe("Pátio — ordem de serviço", () => {
     const { rows: ordemRows } = await db.query<{
       status: string;
       data_conclusao: string | null;
-    }>(`select status, data_conclusao from public.ordem_servico where id = $1`, [os.id]);
+      garantia_ate: string | null;
+    }>(
+      `select status, data_conclusao, garantia_ate from public.ordem_servico where id = $1`,
+      [os.id]
+    );
     expect(ordemRows[0].status).toBe("concluido");
     expect(ordemRows[0].data_conclusao).not.toBeNull();
+    // Garantia padrão de 3 meses carimbada na conclusão (a partir de hoje). Data
+    // pura → comparo em dias para não depender de fuso/horário: 3 meses ≈ 89–92
+    // dias, com folga para a virada de dia entre o horário local e o do banco.
+    expect(ordemRows[0].garantia_ate).not.toBeNull();
+    const UM_DIA = 24 * 60 * 60 * 1000;
+    // pglite devolve `date` como objeto Date; new Date() cobre Date e string.
+    const garantia = new Date(ordemRows[0].garantia_ate as unknown as string);
+    const dias = Math.round((garantia.getTime() - Date.now()) / UM_DIA);
+    expect(dias).toBeGreaterThanOrEqual(86);
+    expect(dias).toBeLessThanOrEqual(95);
 
     const { rows: contasRows } = await db.query<{
       tipo: string;
@@ -259,6 +310,147 @@ describe("Pátio — ordem de serviço", () => {
       [os.id]
     );
     expect(Number(contasRows[0].count)).toBe(0);
+  });
+
+  // ---------------------------------------------------------------------
+  // receber_parcelas_da_os (0026): o "cliente pagou tudo" da entrega do carro.
+  // Antes o laço pelas parcelas vivia na aplicação, uma transação por parcela.
+  // ---------------------------------------------------------------------
+
+  // Conclui uma OS com dois itens (gera duas contas a receber ligadas à OS) e
+  // devolve os ids das parcelas em aberto.
+  async function concluirComDuasContas() {
+    const os = await abrirOrdem(
+      oficinaA.workshopId,
+      oficinaA.usuarioId,
+      clienteVeiculoA.clienteId,
+      clienteVeiculoA.veiculoId
+    );
+
+    const itens = [
+      { categoria_id: categoriaReceitaA, valor: 100 },
+      { categoria_id: categoriaPecasA, valor: 250 },
+    ];
+    await asUser(db, oficinaA.usuarioId, (tx) =>
+      tx.query(`select public.concluir_ordem_servico($1,$2::jsonb,'2026-08-01',$3)`, [
+        os.id,
+        JSON.stringify(itens),
+        oficinaA.usuarioId,
+      ])
+    );
+
+    return os;
+  }
+
+  async function statusDasParcelas(ordemId: string) {
+    const { rows } = await db.query<{ status: string }>(
+      `select p.status
+         from public.parcela_financeira p
+         join public.conta_financeira c on c.id = p.conta_id
+        where c.ordem_servico_id = $1
+        order by p.valor`,
+      [ordemId]
+    );
+    return rows.map((r) => r.status);
+  }
+
+  it("receber_parcelas_da_os quita todas as parcelas em aberto da OS de uma vez", async () => {
+    const os = await concluirComDuasContas();
+    expect(await statusDasParcelas(os.id)).toEqual(["aberta", "aberta"]);
+
+    const { rows } = await asUser(db, oficinaA.usuarioId, (tx) =>
+      tx.query<{ receber_parcelas_da_os: number }>(
+        `select public.receber_parcelas_da_os($1,'2026-08-10','dinheiro',null,$2)`,
+        [os.id, oficinaA.usuarioId]
+      )
+    );
+    expect(rows[0].receber_parcelas_da_os).toBe(2);
+    expect(await statusDasParcelas(os.id)).toEqual(["liquidada", "liquidada"]);
+
+    // As contas acompanham (recalcular_status_conta roda dentro do laço).
+    const { rows: contas } = await db.query<{ status: string }>(
+      `select status from public.conta_financeira where ordem_servico_id = $1`,
+      [os.id]
+    );
+    expect(contas.every((c) => c.status === "liquidada")).toBe(true);
+  });
+
+  it("receber_parcelas_da_os recusa quando não há saldo em aberto", async () => {
+    const os = await concluirComDuasContas();
+    await asUser(db, oficinaA.usuarioId, (tx) =>
+      tx.query(`select public.receber_parcelas_da_os($1,'2026-08-10','pix',null,$2)`, [
+        os.id,
+        oficinaA.usuarioId,
+      ])
+    );
+
+    await expect(
+      asUser(db, oficinaA.usuarioId, (tx) =>
+        tx.query(`select public.receber_parcelas_da_os($1,'2026-08-11','pix',null,$2)`, [
+          os.id,
+          oficinaA.usuarioId,
+        ])
+      )
+    ).rejects.toThrow(/não há saldo a receber/i);
+  });
+
+  it("receber_parcelas_da_os não deixa pagamento pela metade se uma parcela falhar", async () => {
+    const os = await concluirComDuasContas();
+
+    // Trigger que deixa o primeiro pagamento da OS passar e derruba o segundo —
+    // é o cenário que o laço na aplicação tratava mal: a primeira parcela ficava
+    // gravada e o usuário só via "não foi possível", sem saber que metade entrou.
+    // Uma instrução por query(): o pglite não aceita várias numa prepared.
+    await db.query(`
+      create function public._falha_no_segundo_pagamento() returns trigger
+      language plpgsql as $fn$
+      begin
+        if (select count(*)
+              from public.pagamento_financeira pg
+              join public.parcela_financeira pa on pa.id = pg.parcela_id
+              join public.conta_financeira c on c.id = pa.conta_id
+             where c.ordem_servico_id = (
+                     select c2.ordem_servico_id
+                       from public.parcela_financeira pa2
+                       join public.conta_financeira c2 on c2.id = pa2.conta_id
+                      where pa2.id = new.parcela_id)) >= 1 then
+          raise exception 'falha simulada no meio do lote';
+        end if;
+        return new;
+      end $fn$
+    `);
+    await db.query(`
+      create trigger _falha_no_segundo
+        before insert on public.pagamento_financeira
+        for each row execute function public._falha_no_segundo_pagamento()
+    `);
+
+    try {
+      // Sem transação explícita de propósito: assim o que desfaz o primeiro
+      // pagamento é a própria função (uma instrução só), não um rollback do
+      // teste. É exatamente essa a garantia que a 0026 acrescenta.
+      await expect(
+        db.query(`select public.receber_parcelas_da_os($1,'2026-08-10','dinheiro',null,$2)`, [
+          os.id,
+          oficinaA.usuarioId,
+        ])
+      ).rejects.toThrow(/falha simulada/i);
+
+      // Nada gravado, nenhuma parcela mexida.
+      const { rows: pagamentos } = await db.query<{ count: string }>(
+        `select count(*)
+           from public.pagamento_financeira pg
+           join public.parcela_financeira pa on pa.id = pg.parcela_id
+           join public.conta_financeira c on c.id = pa.conta_id
+          where c.ordem_servico_id = $1`,
+        [os.id]
+      );
+      expect(Number(pagamentos[0].count)).toBe(0);
+      expect(await statusDasParcelas(os.id)).toEqual(["aberta", "aberta"]);
+    } finally {
+      await db.query(`drop trigger _falha_no_segundo on public.pagamento_financeira`);
+      await db.query(`drop function public._falha_no_segundo_pagamento()`);
+    }
   });
 
   it("rejeita concluir uma OS que já está concluída ou cancelada", async () => {

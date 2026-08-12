@@ -21,6 +21,7 @@ import {
 import { Controller, type Control } from "react-hook-form";
 import { normalizarCEP } from "@/lib/validators/contato";
 import { buscarEnderecoPorCep } from "@/lib/format/via-cep";
+import { Erro } from "@/components/ui/erro";
 
 export function ClienteFields({
   register,
@@ -84,7 +85,7 @@ export function ClienteFields({
           {errors.tipo && <Erro msg={errors.tipo.message} />}
         </div>
         <div className="grid gap-1.5">
-          <Label htmlFor="documento" required>CPF/CNPJ</Label>
+          <Label htmlFor="documento">CPF/CNPJ</Label>
           <Input id="documento" {...register("documento")} />
           {errors.documento && <Erro msg={errors.documento.message} />}
         </div>
@@ -111,7 +112,7 @@ export function ClienteFields({
 
       <div className="grid grid-cols-3 gap-4">
         <div className="grid gap-1.5">
-          <Label htmlFor="cep" required>CEP</Label>
+          <Label htmlFor="cep">CEP</Label>
           <Input
             id="cep"
             {...cepRegister}
@@ -126,7 +127,7 @@ export function ClienteFields({
           )}
         </div>
         <div className="col-span-2 grid gap-1.5">
-          <Label htmlFor="logradouro" required>Endereço</Label>
+          <Label htmlFor="logradouro">Endereço</Label>
           <Input id="logradouro" {...register("logradouro")} />
           {errors.logradouro && <Erro msg={errors.logradouro.message} />}
         </div>
@@ -134,7 +135,7 @@ export function ClienteFields({
 
       <div className="grid grid-cols-3 gap-4">
         <div className="grid gap-1.5">
-          <Label htmlFor="numero" required>Número</Label>
+          <Label htmlFor="numero">Número</Label>
           <Input id="numero" {...register("numero")} />
           {errors.numero && <Erro msg={errors.numero.message} />}
         </div>
@@ -170,6 +171,3 @@ export function ClienteFields({
   );
 }
 
-function Erro({ msg }: { msg?: string }) {
-  return <p className="text-sm text-destructive">{msg}</p>;
-}

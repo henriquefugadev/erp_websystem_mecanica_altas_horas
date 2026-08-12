@@ -5,6 +5,7 @@ import type { FornecedorFormValues } from "./fornecedor-form-schema";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Erro } from "@/components/ui/erro";
 
 export function FornecedorFields({
   register,
@@ -66,6 +67,3 @@ export function FornecedorFields({
   );
 }
 
-function Erro({ msg }: { msg?: string }) {
-  return <p className="text-sm text-destructive">{msg}</p>;
-}

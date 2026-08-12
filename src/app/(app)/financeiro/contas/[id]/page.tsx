@@ -17,6 +17,7 @@ import { StatusBadge } from "@/components/financeiro/status-badge";
 import { RegistrarPagamentoDialog } from "@/components/financeiro/registrar-pagamento-dialog";
 import { EstornarPagamentoButton } from "@/components/financeiro/estornar-pagamento-button";
 import { CancelarContaButton } from "@/components/financeiro/cancelar-conta-button";
+import { ExcluirContaButton } from "@/components/financeiro/excluir-conta-button";
 import { formatarData, formatarDinheiro, hojeSaoPaulo } from "@/lib/format";
 
 export default async function ContaDetalhePage({
@@ -53,6 +54,9 @@ export default async function ContaDetalhePage({
         <div className="flex items-center gap-2">
           <StatusBadge status={conta.status} />
           {podeCancelar && <CancelarContaButton contaId={conta.id} />}
+          {/* Excluir é do admin (a action também barra no servidor) — sem isto,
+              a Michele veria um botão que sempre devolve "só o administrador". */}
+          {sessao.papel === "admin" && <ExcluirContaButton contaId={conta.id} />}
         </div>
       </div>
 

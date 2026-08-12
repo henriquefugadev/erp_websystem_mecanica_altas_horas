@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database, StatusOrcamento } from "@/lib/supabase/database.types";
 import type { OrcamentoOutput } from "@/lib/validators/orcamento.schema";
 import type { DiagnosticoOutput } from "@/lib/validators/diagnostico.schema";
 import type { OrcamentoComCliente, OrcamentoComRelacoes } from "../domain/types";
@@ -43,9 +43,14 @@ function mapItensDiagnostico(itens: DiagnosticoOutput["itens"]) {
 
 const SELECT_LISTA = "*, cliente(nome), veiculo(placa, modelo, marca)";
 
+// `orcamento` tem DUAS FKs para `ordem_servico` (a OS de origem do rascunho, via
+// orcamento.ordem_servico_id; e a OS gerada na aprovação, via
+// ordem_servico.orcamento_id). Sem desambiguar, o PostgREST recusa o embed
+// (PGRST201) e a busca falha — o que voltava como "Orçamento não encontrado" ao
+// baixar o PDF. Fixamos na FK da OS de origem (orcamento_ordem_servico_id_fkey).
 const SELECT_DETALHE =
   "*, cliente(nome, telefone), veiculo(placa, modelo, marca, ano, cor, quilometragem), " +
-  "orcamento_item(*), ordem_servico(numero)";
+  "orcamento_item(*), ordem_servico!orcamento_ordem_servico_id_fkey(numero, funcionario(nome))";
 
 export async function listarOrcamentos(supabase: Client) {
   const { data, error } = await supabase
@@ -187,6 +192,23 @@ export async function buscarOrcamentoRascunhoDaOs(
     }));
 
   return { orcamentoId: data.id, itens };
+}
+
+// Só o status gravado — leitura leve para os guards das actions decidirem se a
+// operação ainda faz sentido, sem carregar o orçamento inteiro com os itens.
+export async function buscarStatusOrcamento(
+  supabase: Client,
+  id: string
+): Promise<StatusOrcamento> {
+  const { data, error } = await supabase
+    .from("orcamento")
+    .select("status")
+    .eq("id", id)
+    .is("deleted_at", null)
+    .single();
+
+  if (error) throw error;
+  return data.status;
 }
 
 export async function marcarOrcamentoEnviado(supabase: Client, id: string) {

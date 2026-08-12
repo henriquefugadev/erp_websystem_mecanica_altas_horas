@@ -6,7 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/clientes";
+  // Mesmo destino do login normal: o Pátio. Só entra aqui quem clicou no link
+  // do e-mail, e o `next` real é sempre /redefinir-senha.
+  const next = searchParams.get("next") ?? "/patio";
 
   if (code) {
     const supabase = await createClient();

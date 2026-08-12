@@ -21,6 +21,7 @@ import {
   unitarioParaTotalDaLinha,
 } from "@/modules/orcamento/domain/calculo";
 import type { TipoItemOrcamento } from "@/modules/orcamento/data/tipo-item.repository";
+import type { ServicoCatalogo } from "@/modules/servicos/data/servico-catalogo.repository";
 import { formatarDinheiro } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,8 +46,6 @@ import type { PecaOpcao } from "./usar-peca-dialog";
 type FormValues = z.input<typeof diagnosticoSchema>;
 type FormOutput = z.output<typeof diagnosticoSchema>;
 type ItemForm = FormValues["itens"][number];
-
-const DATALIST_ID = "orcamento-pecas-catalogo";
 
 // Fallback para oficinas sem tipos cadastrados ainda (Peça/Serviço, como era
 // antes de a lista virar parametrizável). Ids fictícios — tipoId não é salvo.
@@ -82,6 +81,7 @@ export function OrcamentoDialog({
   markup,
   markupHabilitado,
   tipos,
+  servicos,
   open,
   onOpenChange,
 }: {
@@ -92,10 +92,14 @@ export function OrcamentoDialog({
   markup: number;
   markupHabilitado: boolean;
   tipos: TipoItemOrcamento[];
+  servicos: ServicoCatalogo[];
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
   const router = useRouter();
+  // Id do datalist é por OS: vários cards podem ter o dialog na árvore, e id
+  // repetido faria todos os campos apontarem para o primeiro datalist do DOM.
+  const datalistId = `orcamento-catalogo-${ordemId}`;
   const [openInterno, setOpenInterno] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -240,12 +244,33 @@ export function OrcamentoDialog({
     }
   }
 
-  function escolherPeca(index: number, valor: string) {
+  // A descrição digitada bateu com algo do catálogo? Então classifica o tipo
+  // sozinho e, no caso de serviço, já traz o preço cadastrado — é o que evita
+  // redigitar "Troca de óleo e filtro" e o preço dela toda semana. O campo
+  // continua editável: o preço sugerido é ponto de partida, não trava.
+  function escolherSugestao(index: number, valor: string) {
     const peca = pecas.find((p) => p.nome === valor);
     form.setValue(`itens.${index}.pecaId`, peca?.id ?? "");
     if (peca) {
       const tipoPeca = tiposUsaveis.find((t) => t.natureza === "peca") ?? tipoPadrao;
       escolherTipo(index, tipoPeca.id);
+      return;
+    }
+
+    const servico = servicos.find((s) => s.nome === valor);
+    if (!servico) return;
+
+    const tipoServico = tiposUsaveis.find((t) => t.natureza === "servico") ?? tipoPadrao;
+    escolherTipo(index, tipoServico.id);
+
+    if (servico.preco_padrao > 0) {
+      // O campo "Preço" guarda o total da linha, então multiplica pela qtd.
+      const qtd = Number(form.getValues(`itens.${index}.quantidade`)) || 1;
+      form.setValue(
+        `itens.${index}.precoUnitario`,
+        String(arredondarCentavos(servico.preco_padrao * qtd)),
+        { shouldDirty: true, shouldValidate: true }
+      );
     }
   }
 
@@ -319,9 +344,15 @@ export function OrcamentoDialog({
           <DialogTitle>Orçamento da OS #{numero}</DialogTitle>
         </DialogHeader>
 
-        <datalist id={DATALIST_ID}>
+        {/* Sugestões da descrição: peças do estoque + serviços do catálogo
+            (Configurações). Com o Estoque desligado, `pecas` vem vazio e o
+            catálogo de serviços carrega o autocomplete sozinho. */}
+        <datalist id={datalistId}>
           {pecas.map((p) => (
-            <option key={p.id} value={p.nome} />
+            <option key={`peca-${p.id}`} value={p.nome} />
+          ))}
+          {servicos.map((s) => (
+            <option key={`servico-${s.id}`} value={s.nome} />
           ))}
         </datalist>
 
@@ -380,11 +411,11 @@ export function OrcamentoDialog({
                             descField.ref(el);
                             descRefs.current[index] = el;
                           }}
-                          list={DATALIST_ID}
+                          list={datalistId}
                           placeholder="Peça ou serviço"
                           onChange={(e) => {
                             descField.onChange(e);
-                            escolherPeca(index, e.target.value);
+                            escolherSugestao(index, e.target.value);
                           }}
                         />
                       )}

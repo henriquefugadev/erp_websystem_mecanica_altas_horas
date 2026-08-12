@@ -21,10 +21,9 @@ import {
 import { podeCancelar, podeReceber } from "@/modules/fornecedores/domain/pedido";
 import { STATUS_PEDIDO_LABEL } from "@/modules/fornecedores/domain/types";
 import { mensagemDeErro } from "@/modules/financeiro/application/erros";
+import type { ActionResult } from "@/lib/action-result";
 
-export type ActionResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; erro: string };
+export type { ActionResult };
 
 export async function criarPedidoAction(
   entrada: unknown

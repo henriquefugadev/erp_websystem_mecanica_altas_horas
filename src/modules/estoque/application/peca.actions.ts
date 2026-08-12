@@ -21,10 +21,9 @@ import {
   registrarMovimentacao,
 } from "@/modules/estoque/data/movimentacao.repository";
 import { mensagemDeErro } from "@/modules/financeiro/application/erros";
+import type { ActionResult } from "@/lib/action-result";
 
-export type ActionResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; erro: string };
+export type { ActionResult };
 
 export async function criarPecaAction(entrada: unknown): Promise<ActionResult<{ id: string }>> {
   const sessao = await getSessaoAtual();

@@ -90,7 +90,39 @@ export async function cancelarConta(supabase: Client, id: string) {
   const { error } = await supabase
     .from("conta_financeira")
     .update({ status: "cancelada" })
-    .eq("id", id);
+    .eq("id", id)
+    // `.select().single()` de propósito: um UPDATE barrado pela RLS afeta 0
+    // linhas e NÃO devolve erro — a tela diria "cancelada" sem nada ter mudado.
+    // Com o single(), 0 linhas viram PGRST116 e o erro sobe até o usuário.
+    .select("id")
+    .single();
+
+  if (error) throw error;
+}
+
+// Exclui a conta (soft-delete): a RLS não libera DELETE físico para a aplicação,
+// então marcamos `deleted_at` — some da lista, do detalhe e da inadimplência
+// (todos filtram deleted_at), mas continua no banco para auditoria. Antes,
+// cancelamos as parcelas em aberto: o `financeiro_resumo` do dashboard NÃO
+// filtra deleted_at, então sem isso o saldo de uma conta de teste seguiria
+// contando em "a receber"/"a pagar". Uso principal: limpar lançamentos de teste.
+export async function excluirConta(supabase: Client, id: string) {
+  const { error: erroParcelas } = await supabase
+    .from("parcela_financeira")
+    .update({ status: "cancelada" })
+    .eq("conta_id", id)
+    .in("status", ["aberta", "parcial"]);
+
+  if (erroParcelas) throw erroParcelas;
+
+  const { error } = await supabase
+    .from("conta_financeira")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id)
+    // Ver o comentário em cancelarConta: sem o single(), a RLS bloqueando vira
+    // um "excluída" mentiroso na tela.
+    .select("id")
+    .single();
 
   if (error) throw error;
 }

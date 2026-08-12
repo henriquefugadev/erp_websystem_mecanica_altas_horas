@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getSessaoAtual } from "@/lib/supabase/sessao";
 import { orcamentoSchema } from "@/lib/validators/orcamento.schema";
 import { diagnosticoSchema } from "@/lib/validators/diagnostico.schema";
 import {
@@ -10,6 +9,7 @@ import {
   atualizarItensOrcamento,
   atualizarOsAposAprovacao,
   buscarOrcamentoRascunhoDaOs,
+  buscarStatusOrcamento,
   cancelarOrcamento,
   criarOrcamento,
   criarOrcamentoDaOs,
@@ -18,15 +18,20 @@ import {
   recusarOrcamento,
   type DiagnosticoRascunho,
 } from "@/modules/orcamento/data/orcamento.repository";
+import {
+  erroOrcamentoFinalizado,
+  orcamentoTemDesfecho,
+} from "@/modules/orcamento/domain/status";
 import { mensagemDeErro } from "@/modules/financeiro/application/erros";
+import { exigirSessao, type ActionResult } from "@/lib/action-result";
 
-export type ActionResult<T> = { ok: true; data: T } | { ok: false; erro: string };
+export type { ActionResult };
 
 export async function criarOrcamentoAction(
   entrada: unknown
 ): Promise<ActionResult<{ id: string }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = orcamentoSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -35,7 +40,12 @@ export async function criarOrcamentoAction(
 
   const supabase = await createClient();
   try {
-    const id = await criarOrcamento(supabase, sessao.workshopId, sessao.usuarioId, parsed.data);
+    const id = await criarOrcamento(
+      supabase,
+      guard.sessao.workshopId,
+      guard.sessao.usuarioId,
+      parsed.data
+    );
     revalidatePath("/orcamentos");
     return { ok: true, data: { id } };
   } catch (e) {
@@ -47,9 +57,14 @@ export async function criarOrcamentoAction(
 }
 
 // Carrega o diagnóstico (rascunho vinculado à OS) para prefill do dialog.
+// Sem sessão, `throw`: a RLS devolveria null e o dialog abriria em branco, como
+// se a OS não tivesse diagnóstico — e a Michele redigitaria tudo por cima.
 export async function buscarDiagnosticoAction(
   ordemId: string
 ): Promise<DiagnosticoRascunho | null> {
+  const guard = await exigirSessao();
+  if (!guard.ok) throw new Error(guard.erro);
+
   const supabase = await createClient();
   return buscarOrcamentoRascunhoDaOs(supabase, ordemId);
 }
@@ -61,8 +76,8 @@ export async function salvarDiagnosticoAction(
   ordemId: string,
   entrada: unknown
 ): Promise<ActionResult<{ orcamentoId: string }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = diagnosticoSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -77,7 +92,12 @@ export async function salvarDiagnosticoAction(
       await atualizarItensOrcamento(supabase, existente.orcamentoId, parsed.data.itens);
       orcamentoId = existente.orcamentoId;
     } else {
-      orcamentoId = await criarOrcamentoDaOs(supabase, ordemId, sessao.usuarioId, parsed.data.itens);
+      orcamentoId = await criarOrcamentoDaOs(
+        supabase,
+        ordemId,
+        guard.sessao.usuarioId,
+        parsed.data.itens
+      );
     }
     revalidatePath("/patio");
     revalidatePath("/orcamentos");
@@ -88,11 +108,16 @@ export async function salvarDiagnosticoAction(
 }
 
 export async function marcarOrcamentoEnviadoAction(id: string): Promise<ActionResult<null>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const supabase = await createClient();
   try {
+    const status = await buscarStatusOrcamento(supabase, id);
+    if (orcamentoTemDesfecho(status)) {
+      return { ok: false, erro: erroOrcamentoFinalizado(status, "marcar como enviado") };
+    }
+
     await marcarOrcamentoEnviado(supabase, id);
     revalidatePath(`/orcamentos/${id}`);
     return { ok: true, data: null };
@@ -105,16 +130,23 @@ export async function aprovarOrcamentoAction(
   id: string,
   itensAprovadosIds: string[]
 ): Promise<ActionResult<{ ordemServicoId: string; faltaPeca: boolean }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const supabase = await createClient();
   try {
+    // Guard mais importante dos quatro: aprovar de novo geraria uma segunda
+    // leva de pedidos de compra para as mesmas peças.
+    const status = await buscarStatusOrcamento(supabase, id);
+    if (orcamentoTemDesfecho(status)) {
+      return { ok: false, erro: erroOrcamentoFinalizado(status, "aprovar") };
+    }
+
     const ordemServicoId = await aprovarOrcamento(
       supabase,
       id,
       itensAprovadosIds,
-      sessao.usuarioId
+      guard.sessao.usuarioId
     );
 
     // Pós-aprovação: se sobrou peça a comprar, a OS vai para "aguardando peça";
@@ -131,11 +163,16 @@ export async function aprovarOrcamentoAction(
 }
 
 export async function recusarOrcamentoAction(id: string): Promise<ActionResult<null>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const supabase = await createClient();
   try {
+    const status = await buscarStatusOrcamento(supabase, id);
+    if (orcamentoTemDesfecho(status)) {
+      return { ok: false, erro: erroOrcamentoFinalizado(status, "recusar") };
+    }
+
     await recusarOrcamento(supabase, id);
     revalidatePath(`/orcamentos/${id}`);
     return { ok: true, data: null };
@@ -145,11 +182,16 @@ export async function recusarOrcamentoAction(id: string): Promise<ActionResult<n
 }
 
 export async function cancelarOrcamentoAction(id: string): Promise<ActionResult<null>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const supabase = await createClient();
   try {
+    const status = await buscarStatusOrcamento(supabase, id);
+    if (orcamentoTemDesfecho(status)) {
+      return { ok: false, erro: erroOrcamentoFinalizado(status, "cancelar") };
+    }
+
     await cancelarOrcamento(supabase, id);
     revalidatePath(`/orcamentos/${id}`);
     return { ok: true, data: null };

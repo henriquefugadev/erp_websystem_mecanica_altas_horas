@@ -1,4 +1,8 @@
 import type { StatusOS } from "@/lib/supabase/database.types";
+import {
+  PARAMETROS_PADRAO,
+  type ParametrosPatio,
+} from "@/modules/workshop/domain/parametros";
 import { CAPACIDADE_GALPAO, GALPOES, type Galpao } from "./types";
 
 /**
@@ -24,33 +28,49 @@ export function transicaoPermitida(de: StatusOS, para: StatusOS): boolean {
 // Além desse tempo sem avançar, o card ganha o badge de atenção. Pausa
 // costuma ser esperada (cliente trazendo peça aos poucos), por isso o
 // limite de 'parado' é bem mais folgado que os outros dois.
-export const LIMITE_AGUARDANDO_HORAS = 24;
-export const LIMITE_EXECUCAO_HORAS = 48;
-export const LIMITE_PARADO_HORAS = 168; // 7 dias
+// Estes são os PADRÕES — a oficina pode sobrescrever cada um nas Configurações
+// (workshop.sla_*), que chegam aqui pelo parâmetro opcional `limites`.
+export const LIMITE_AGUARDANDO_HORAS = PARAMETROS_PADRAO.slaAguardandoHoras;
+export const LIMITE_EXECUCAO_HORAS = PARAMETROS_PADRAO.slaExecucaoHoras;
+export const LIMITE_PARADO_HORAS = PARAMETROS_PADRAO.slaParadoHoras; // 7 dias
 // Cliente demorando pra confirmar o orçamento merece cobrança da Michele —
 // limite intermediário (aproveita data_pausa, carimbada ao entrar na coluna).
-export const LIMITE_CONFIRMACAO_HORAS = 48;
+export const LIMITE_CONFIRMACAO_HORAS = PARAMETROS_PADRAO.slaConfirmacaoHoras;
 
 export type NivelAtencao = "ok" | "atencao";
+
+/** Prazos de atenção em horas. Aceita o objeto de parâmetros da oficina. */
+export type LimitesAtencao = Pick<
+  ParametrosPatio,
+  "slaAguardandoHoras" | "slaConfirmacaoHoras" | "slaExecucaoHoras" | "slaParadoHoras"
+>;
+
+const LIMITES_PADRAO: LimitesAtencao = {
+  slaAguardandoHoras: LIMITE_AGUARDANDO_HORAS,
+  slaConfirmacaoHoras: LIMITE_CONFIRMACAO_HORAS,
+  slaExecucaoHoras: LIMITE_EXECUCAO_HORAS,
+  slaParadoHoras: LIMITE_PARADO_HORAS,
+};
 
 export function nivelAtencao(
   status: StatusOS,
   dataAbertura: Date,
   dataInicio: Date | null,
   dataPausa: Date | null,
-  agora: Date
+  agora: Date,
+  limites: LimitesAtencao = LIMITES_PADRAO
 ): NivelAtencao {
   if (status === "aguardando") {
-    return horasEntre(dataAbertura, agora) >= LIMITE_AGUARDANDO_HORAS ? "atencao" : "ok";
+    return horasEntre(dataAbertura, agora) >= limites.slaAguardandoHoras ? "atencao" : "ok";
   }
   if (status === "aguardando_confirmacao" && dataPausa) {
-    return horasEntre(dataPausa, agora) >= LIMITE_CONFIRMACAO_HORAS ? "atencao" : "ok";
+    return horasEntre(dataPausa, agora) >= limites.slaConfirmacaoHoras ? "atencao" : "ok";
   }
   if (status === "em_execucao" && dataInicio) {
-    return horasEntre(dataInicio, agora) >= LIMITE_EXECUCAO_HORAS ? "atencao" : "ok";
+    return horasEntre(dataInicio, agora) >= limites.slaExecucaoHoras ? "atencao" : "ok";
   }
   if (status === "parado" && dataPausa) {
-    return horasEntre(dataPausa, agora) >= LIMITE_PARADO_HORAS ? "atencao" : "ok";
+    return horasEntre(dataPausa, agora) >= limites.slaParadoHoras ? "atencao" : "ok";
   }
   return "ok";
 }
@@ -68,26 +88,34 @@ export interface OrdemParaLotacao {
 // carro não saiu do galpão enquanto espera peça, pagamento ou o OK do cliente.
 const STATUS_OCUPA_GALPAO: StatusOS[] = ["em_execucao", "parado", "aguardando_confirmacao"];
 
-export function lotacaoGalpoes(ordens: OrdemParaLotacao[]): Record<Galpao, number> {
-  const contagem: Record<Galpao, number> = { 1: 0, 2: 0, 3: 0 };
+export function lotacaoGalpoes(
+  ordens: OrdemParaLotacao[],
+  galpoes: Galpao[] = GALPOES
+): Record<Galpao, number> {
+  const contagem: Record<Galpao, number> = {};
+  for (const g of galpoes) contagem[g] = 0;
+
   for (const ordem of ordens) {
-    if (STATUS_OCUPA_GALPAO.includes(ordem.status) && ordem.galpao) {
-      contagem[ordem.galpao as Galpao] += 1;
-    }
+    if (!ordem.galpao || !STATUS_OCUPA_GALPAO.includes(ordem.status)) continue;
+    // Carro numa baia que a oficina removeu depois (diminuiu a quantidade de
+    // galpões) não some da conta — vira uma chave a mais, e o quadro mostra.
+    contagem[ordem.galpao] = (contagem[ordem.galpao] ?? 0) + 1;
   }
   return contagem;
 }
 
 /** Galpão sugerido ao iniciar uma OS: o menos ocupado no momento. */
 export function galpaoMenosOcupado(
-  ordens: OrdemParaLotacao[]
+  ordens: OrdemParaLotacao[],
+  galpoes: Galpao[] = GALPOES,
+  capacidade: number = CAPACIDADE_GALPAO
 ): { galpao: Galpao; lotado: boolean } {
-  const contagem = lotacaoGalpoes(ordens);
-  const [galpao, quantidade] = GALPOES.map(
-    (g) => [g, contagem[g]] as const
-  ).reduce((menor, atual) => (atual[1] < menor[1] ? atual : menor));
+  const contagem = lotacaoGalpoes(ordens, galpoes);
+  const [galpao, quantidade] = galpoes
+    .map((g) => [g, contagem[g] ?? 0] as const)
+    .reduce((menor, atual) => (atual[1] < menor[1] ? atual : menor));
 
-  return { galpao, lotado: quantidade >= CAPACIDADE_GALPAO };
+  return { galpao, lotado: quantidade >= capacidade };
 }
 
 export type StatusPagamento = "sem_cobranca" | "pendente" | "parcial" | "pago";

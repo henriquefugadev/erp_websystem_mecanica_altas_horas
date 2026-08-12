@@ -32,6 +32,18 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# O .env.example não tem segredo nenhum — é o modelo que o README manda copiar
+# (`cp .env.example .env.local`). Sem esta exceção, a regra `.env*` acima o
+# escondia e a instrução do README apontava para um arquivo inexistente.
+!.env.example
+
+# Dados REAIS da oficina (nomes, telefones, placas de clientes), extraídos do HD
+# antigo. Nunca versionar: o repositório pode ser público e isso é dado pessoal.
+# O seed é rodado manualmente uma vez, direto no banco (ver DEPLOY-VERCEL.md).
+supabase/seed_historico.sql
+supabase/seed_demo_michely.sql
+scripts/historico/historico.json
+scripts/demo/
 
 # vercel
 .vercel

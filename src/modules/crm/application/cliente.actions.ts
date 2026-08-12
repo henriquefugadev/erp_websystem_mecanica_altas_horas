@@ -18,10 +18,9 @@ import {
   softDeleteCliente,
 } from "@/modules/crm/data/cliente.repository";
 import { criarVeiculo } from "@/modules/crm/data/veiculo.repository";
+import { exigirSessao, type ActionResult } from "@/lib/action-result";
 
-export type ActionResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; erro: string };
+export type { ActionResult };
 
 export interface VeiculoOpcaoBusca {
   id: string;
@@ -46,6 +45,12 @@ const LIMITE_RESULTADOS_BUSCA = 20;
 export async function buscarClientesComVeiculosAction(
   termo: string
 ): Promise<ClienteOpcaoBusca[]> {
+  // Toda action exportada é um endpoint HTTP público. A RLS já devolveria lista
+  // vazia sem sessão, mas aí o combobox mostraria "nenhum cliente" como se a
+  // oficina não tivesse nenhum. `throw` cai no error.tsx, que explica.
+  const guard = await exigirSessao();
+  if (!guard.ok) throw new Error(guard.erro);
+
   const supabase = await createClient();
   const clientes =
     termo.trim() === ""

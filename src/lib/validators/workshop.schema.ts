@@ -2,6 +2,13 @@ import { z } from "zod";
 import { validarCEP, normalizarCEP, validarTelefone, normalizarTelefone } from "./contato";
 import { validarCNPJ, normalizarDocumento } from "./documento";
 
+// Prazo de atenção do quadro, em horas. 1h a 1 ano — mesma faixa do CHECK.
+const horasSla = z.coerce
+  .number()
+  .int()
+  .min(1, "Mínimo 1 hora")
+  .max(8760, "Máximo 8760 horas (1 ano)");
+
 export const workshopSchema = z.object({
   nome: z.string().trim().min(1, "Nome é obrigatório"),
   razaoSocial: z.string().trim().optional().or(z.literal("")),
@@ -51,6 +58,39 @@ export const workshopSchema = z.object({
   markupHabilitado: z.boolean().optional().default(false),
   // Hrefs de itens da sidebar que ficam escondidos (sem apagar rota/código).
   navOcultos: z.array(z.string()).optional().default([]),
+
+  // --- Parametrização do pátio (migração 0023) ---------------------------
+  // Os limites batem com os CHECKs do banco: erro claro no formulário em vez
+  // de estouro de constraint depois do clique em salvar.
+  galpoesQuantidade: z.coerce
+    .number()
+    .int()
+    .min(1, "Mínimo 1 galpão")
+    .max(12, "Máximo 12 galpões"),
+  galpaoCapacidade: z.coerce
+    .number()
+    .int()
+    .min(1, "Mínimo 1 vaga")
+    .max(99, "Máximo 99 vagas"),
+  // Rótulo por galpão, na ordem. Posição vazia = "Galpão N".
+  galpaoNomes: z.array(z.string().trim().max(30, "Nome muito longo")).optional().default([]),
+  slaAguardandoHoras: horasSla,
+  slaConfirmacaoHoras: horasSla,
+  slaExecucaoHoras: horasSla,
+  slaParadoHoras: horasSla,
+  garantiaMesesPadrao: z.coerce
+    .number()
+    .int()
+    .min(0, "Não pode ser negativo")
+    .max(120, "Máximo 120 meses"),
+  diasOsConcluidaQuadro: z.coerce
+    .number()
+    .int()
+    .min(1, "Mínimo 1 dia")
+    .max(365, "Máximo 365 dias"),
+  // "" = não configurado; o app volta a decidir a categoria pelo nome.
+  categoriaPecaId: z.string().optional().default(""),
+  categoriaMaoObraId: z.string().optional().default(""),
 });
 
 // workshopSchema termina com .transform() em vários campos; o formulário

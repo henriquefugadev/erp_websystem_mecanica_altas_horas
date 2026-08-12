@@ -5,9 +5,11 @@ function ordemBase(over: Partial<OrdemHistoricoRaw> = {}): OrdemHistoricoRaw {
   return {
     id: "os1",
     numero: 10,
+    titulo: null,
     status: "concluido",
     data_abertura: "2026-08-01T10:00:00Z",
     data_conclusao: "2026-08-02T10:00:00Z",
+    garantia_ate: "2026-11-02",
     queixa: "Barulho na frente",
     veiculo: { id: "v1", modelo: "Gol", marca: "VW", placa: "ABC1D23", cor: "Prata" },
     funcionario: { nome: "Zé" },
@@ -38,6 +40,7 @@ describe("montarHistoricoOs", () => {
     expect(os.total).toBe(350); // 2×100 + 150
     expect(os.veiculo?.nome).toBe("VW Gol");
     expect(os.veiculo?.cor).toBe("Prata");
+    expect(os.garantiaAte).toBe("2026-11-02");
   });
 
   it("mostra a proposta (não aprovado) quando não há orçamento aprovado", () => {

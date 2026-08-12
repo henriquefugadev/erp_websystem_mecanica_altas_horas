@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Building2, Clock, User, Wrench } from "lucide-react";
+import { Archive, ArrowLeft, ArrowRight, Building2, Clock, FileText, User, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,9 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatarPlaca } from "@/lib/format";
+import { formatarData, formatarPlaca, hojeSaoPaulo } from "@/lib/format";
 import {
-  GALPOES,
   MOTIVO_PARADA_LABEL,
   type Galpao,
   type OrdemComRelacoes,
@@ -20,8 +19,12 @@ import {
 import { statusPagamento, type NivelAtencao } from "@/modules/patio/domain/status";
 import type { ValoresConclusao } from "@/modules/patio/data/ordem-servico.repository";
 import type { TipoItemOrcamento } from "@/modules/orcamento/data/tipo-item.repository";
+import type { ServicoCatalogo } from "@/modules/servicos/data/servico-catalogo.repository";
+import type { ParametrosPatio } from "@/modules/workshop/domain/parametros";
 import { ConcluirOsDialog } from "./concluir-os-dialog";
+import { EditarOsDialog } from "./editar-os-dialog";
 import { OrcamentoDialog } from "./orcamento-dialog";
+import type { FuncionarioOpcao } from "./nova-os-dialog";
 import { AvisarClienteButton } from "./avisar-cliente-button";
 import { ReceberPagamentoDialog } from "./receber-pagamento-dialog";
 import { UsarPecaDialog, type PecaOpcao } from "./usar-peca-dialog";
@@ -30,6 +33,7 @@ export function OsCard({
   ordem,
   nivel,
   categoriasReceita,
+  funcionarios,
   pecas,
   diagnosticoCount,
   valoresConclusao,
@@ -37,6 +41,8 @@ export function OsCard({
   markup,
   markupHabilitado,
   tipos,
+  servicos,
+  parametros,
   onIniciar,
   onVoltar,
   onPausar,
@@ -45,12 +51,14 @@ export function OsCard({
   onEnviarConfirmacao,
   onConfirmarCliente,
   onMoverGalpao,
+  onArquivar,
   orcamentoAberto,
   onOrcamentoAbertoChange,
 }: {
   ordem: OrdemComRelacoes;
   nivel: NivelAtencao;
   categoriasReceita: { id: string; nome: string }[];
+  funcionarios: FuncionarioOpcao[];
   pecas: PecaOpcao[];
   diagnosticoCount: number;
   valoresConclusao?: ValoresConclusao;
@@ -58,6 +66,8 @@ export function OsCard({
   markup: number;
   markupHabilitado: boolean;
   tipos: TipoItemOrcamento[];
+  servicos: ServicoCatalogo[];
+  parametros: ParametrosPatio;
   onIniciar: () => void;
   onVoltar: () => void;
   onPausar: () => void;
@@ -66,6 +76,7 @@ export function OsCard({
   onEnviarConfirmacao: () => void;
   onConfirmarCliente: () => void;
   onMoverGalpao: (galpao: Galpao) => void;
+  onArquivar: () => void;
   orcamentoAberto: boolean;
   onOrcamentoAbertoChange: (open: boolean) => void;
 }) {
@@ -82,6 +93,15 @@ export function OsCard({
     ordem.status === "aguardando_confirmacao" ||
     ordem.status === "em_execucao" ||
     ordem.status === "parado";
+  // Editar dados operacionais (queixa/observações/técnico) faz sentido enquanto
+  // a OS está viva; concluída ou cancelada, o registro fica congelado.
+  const podeEditar = ordem.status !== "concluido" && ordem.status !== "cancelada";
+  const garantiaVigente =
+    ordem.garantia_ate !== null && ordem.garantia_ate >= hojeSaoPaulo();
+  const nomeVeiculo = ordem.veiculo
+    ? `${ordem.veiculo.marca ?? ""} ${ordem.veiculo.modelo}`.trim()
+    : "—";
+  const placa = ordem.veiculo ? formatarPlaca(ordem.veiculo.placa) : "";
 
   return (
     <div
@@ -95,12 +115,27 @@ export function OsCard({
       }
     >
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="font-heading text-sm leading-tight">
-            {ordem.veiculo ? `${ordem.veiculo.marca ?? ""} ${ordem.veiculo.modelo}`.trim() : "—"}
-          </p>
+        <div className="min-w-0">
+          <div className="flex items-center gap-1">
+            <p className="truncate font-heading text-sm leading-tight">
+              {ordem.titulo || nomeVeiculo}
+            </p>
+            {podeEditar && (
+              <EditarOsDialog
+                ordemId={ordem.id}
+                numero={ordem.numero}
+                funcionarios={funcionarios}
+                tituloInicial={ordem.titulo}
+                queixaInicial={ordem.queixa}
+                descricaoInicial={ordem.descricao}
+                funcionarioIdInicial={ordem.funcionario_id}
+              />
+            )}
+          </div>
           <p className="text-xs text-muted-foreground">
-            {ordem.veiculo ? formatarPlaca(ordem.veiculo.placa) : ""}
+            {ordem.titulo
+              ? [nomeVeiculo, placa].filter(Boolean).join(" · ")
+              : placa}
           </p>
         </div>
         <span className="shrink-0 text-xs text-muted-foreground">OS #{ordem.numero}</span>
@@ -176,12 +211,17 @@ export function OsCard({
             onValueChange={(v) => onMoverGalpao(Number(v) as Galpao)}
           >
             <SelectTrigger size="sm" aria-label="Trocar galpão">
-              <SelectValue>{(v: string) => `Galpão ${v}`}</SelectValue>
+              {/* Galpão fora da faixa configurada (a oficina diminuiu a
+                  quantidade depois) ainda aparece com o número, para o carro
+                  não sumir da tela. */}
+              <SelectValue>
+                {(v: string) => parametros.nomesGalpao[Number(v) - 1] ?? `Galpão ${v}`}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {GALPOES.map((g) => (
+              {parametros.galpoes.map((g, i) => (
                 <SelectItem key={g} value={String(g)}>
-                  Galpão {g}
+                  {parametros.nomesGalpao[i]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -189,20 +229,47 @@ export function OsCard({
         </div>
       )}
 
+      {ordem.status === "concluido" && ordem.garantia_ate && (
+        <Badge
+          variant="outline"
+          className={
+            garantiaVigente
+              ? "border-fin-entrada/30 bg-fin-entrada/10 text-fin-entrada"
+              : "text-muted-foreground"
+          }
+        >
+          {garantiaVigente
+            ? `Garantia até ${formatarData(ordem.garantia_ate)}`
+            : `Garantia vencida (${formatarData(ordem.garantia_ate)})`}
+        </Badge>
+      )}
+
       <div className="flex flex-wrap gap-2">
-        {podeOrcar && (
-          <OrcamentoDialog
-            ordemId={ordem.id}
-            numero={ordem.numero}
-            statusOs={ordem.status}
-            pecas={pecas}
-            markup={markup}
-            markupHabilitado={markupHabilitado}
-            tipos={tipos}
-            open={orcamentoAberto}
-            onOpenChange={onOrcamentoAbertoChange}
-          />
-        )}
+        {/* O dialog de orçamento é o mais pesado do quadro (formulário com
+            lista dinâmica de itens). Enquanto está fechado, o card mostra só o
+            botão — o dialog é montado no primeiro clique. Com 20 OS na tela,
+            isso deixa de criar 20 formulários que ninguém abriu. O botão daqui
+            é visualmente idêntico ao gatilho que o próprio dialog renderiza. */}
+        {podeOrcar &&
+          (orcamentoAberto ? (
+            <OrcamentoDialog
+              ordemId={ordem.id}
+              numero={ordem.numero}
+              statusOs={ordem.status}
+              pecas={pecas}
+              markup={markup}
+              markupHabilitado={markupHabilitado}
+              tipos={tipos}
+              servicos={servicos}
+              open
+              onOpenChange={onOrcamentoAbertoChange}
+            />
+          ) : (
+            <Button size="sm" variant="outline" onClick={() => onOrcamentoAbertoChange(true)}>
+              <FileText className="size-4" />
+              Orçamento
+            </Button>
+          ))}
         {ordem.status === "aguardando" && (
           <>
             <Button
@@ -267,13 +334,18 @@ export function OsCard({
             <Button size="sm" variant="outline" onClick={onPausar}>
               Pausar
             </Button>
-            <UsarPecaDialog ordemId={ordem.id} pecas={pecas} />
+            {/* Guarda no ponto de uso: o dialog já devolvia null com a lista
+                vazia, mas só depois de montar o formulário. Com o Estoque
+                desligado nas Configurações, `pecas` chega vazio e agora nem o
+                componente é criado. */}
+            {pecas.length > 0 && <UsarPecaDialog ordemId={ordem.id} pecas={pecas} />}
             <ConcluirOsDialog
               ordemId={ordem.id}
               numero={ordem.numero}
               cliente={ordem.cliente}
               veiculo={ordem.veiculo}
               categoriasReceita={categoriasReceita}
+              parametros={parametros}
             />
           </>
         )}
@@ -291,6 +363,17 @@ export function OsCard({
             {podeReceber && (
               <ReceberPagamentoDialog ordemId={ordem.id} numero={ordem.numero} />
             )}
+            {/* Tira a OS do quadro na hora (mesmo efeito da limpeza de N dias,
+                sob demanda). Não apaga: continua no histórico e nos relatórios. */}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onArquivar}
+              title="Arquivar — some do quadro, continua no histórico"
+            >
+              <Archive className="size-4" />
+              Arquivar
+            </Button>
           </>
         )}
         {ordem.status === "parado" && (
@@ -302,7 +385,11 @@ export function OsCard({
             >
               Retomar
             </Button>
-            <UsarPecaDialog ordemId={ordem.id} pecas={pecas} />
+            {/* Guarda no ponto de uso: o dialog já devolvia null com a lista
+                vazia, mas só depois de montar o formulário. Com o Estoque
+                desligado nas Configurações, `pecas` chega vazio e agora nem o
+                componente é criado. */}
+            {pecas.length > 0 && <UsarPecaDialog ordemId={ordem.id} pecas={pecas} />}
             <Button size="sm" variant="ghost" onClick={onCancelar}>
               Cancelar
             </Button>

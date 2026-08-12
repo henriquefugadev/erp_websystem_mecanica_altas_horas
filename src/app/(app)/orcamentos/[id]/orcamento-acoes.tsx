@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Copy, Download, MessageCircle, Percent, X } from "lucide-react";
 import type { OrcamentoComRelacoes } from "@/modules/orcamento/domain/types";
+import { orcamentoTemDesfecho } from "@/modules/orcamento/domain/status";
 import {
   cancelarOrcamentoAction,
   marcarOrcamentoEnviadoAction,
@@ -18,12 +19,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { ResponderOrcamentoDialog } from "./responder-orcamento-dialog";
 
-const STATUS_FINAIS = ["aprovado", "aprovado_parcial", "recusado", "cancelado"];
-
 export function OrcamentoAcoes({ orcamento }: { orcamento: OrcamentoComRelacoes }) {
   const router = useRouter();
   const [processando, setProcessando] = useState(false);
-  const podeAgir = !STATUS_FINAIS.includes(orcamento.status);
+  // Mesma regra que as actions aplicam no servidor (domain/status.ts) — aqui
+  // ela só esconde botão; quem barra de verdade é o servidor.
+  const podeAgir = !orcamentoTemDesfecho(orcamento.status);
 
   async function marcarEnviado() {
     setProcessando(true);
@@ -125,6 +126,7 @@ export function OrcamentoAcoes({ orcamento }: { orcamento: OrcamentoComRelacoes 
       <Button
         size="sm"
         variant="outline"
+        nativeButton={false}
         onClick={marcarEnviadoAoCompartilhar}
         render={<a href={`/api/orcamentos/${orcamento.id}/pdf`} />}
       >
@@ -141,6 +143,7 @@ export function OrcamentoAcoes({ orcamento }: { orcamento: OrcamentoComRelacoes 
         <Button
           size="sm"
           variant="outline"
+          nativeButton={false}
           onClick={marcarEnviadoAoCompartilhar}
           render={<a href={linkWhatsApp} target="_blank" rel="noopener noreferrer" />}
         >

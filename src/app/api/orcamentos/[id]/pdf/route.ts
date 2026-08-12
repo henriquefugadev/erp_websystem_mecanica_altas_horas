@@ -2,7 +2,6 @@ import { createElement } from "react";
 import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
-import { getSessaoAtual } from "@/lib/supabase/sessao";
 import { buscarOrcamentoPorId } from "@/modules/orcamento/data/orcamento.repository";
 import { buscarConfiguracao, obterUrlLogo } from "@/modules/workshop/data/workshop.repository";
 import { OrcamentoPdf } from "@/modules/orcamento/pdf/orcamento-pdf";
@@ -15,11 +14,28 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return new NextResponse("Não autorizado.", { status: 401 });
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return new NextResponse("Não autorizado.", { status: 401 });
+
+  const { data: usuario } = await supabase
+    .from("usuario")
+    .select("nome, email")
+    .eq("id", user.id)
+    .single();
+
+  const { data: vinculo } = await supabase
+    .from("usuario_workshop")
+    .select("workshop_id, papel")
+    .eq("usuario_id", user.id)
+    .limit(1)
+    .maybeSingle();
+
+  if (!usuario || !vinculo) return new NextResponse("Não autorizado.", { status: 401 });
 
   const { id } = await params;
-  const supabase = await createClient();
 
   let orcamento;
   try {
@@ -28,7 +44,7 @@ export async function GET(
     return new NextResponse("Orçamento não encontrado.", { status: 404 });
   }
 
-  const workshop = await buscarConfiguracao(supabase, sessao.workshopId);
+  const workshop = await buscarConfiguracao(supabase, vinculo.workshop_id);
   const logoUrl = workshop.logo_path ? await obterUrlLogo(supabase, workshop.logo_path) : null;
 
   // renderToBuffer() é tipado pra aceitar só um elemento <Document> literal,

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,7 +19,30 @@ const loginSchema = z.object({
 
 type LoginInput = z.infer<typeof loginSchema>;
 
+/**
+ * Motivos pelos quais outra tela devolveu a pessoa para cá. Sem isto, os dois
+ * casos abaixo terminavam num formulário de login mudo — a pessoa reentrava e
+ * era devolvida de novo, sem nunca saber o porquê.
+ */
+const AVISOS: Record<string, string> = {
+  // `/auth/callback` quando o código do e-mail não vale mais.
+  link: "Esse link de e-mail expirou ou já foi usado. Peça um novo em “Esqueci a senha”.",
+  // Login existe no Auth, mas não está ligado a nenhuma oficina — entrar de
+  // novo não resolve, só o administrador resolve (ver DEPLOY-VERCEL.md).
+  "sem-oficina":
+    "Seu acesso ainda não está vinculado a uma oficina. Peça ao administrador para liberar — entrar de novo não vai adiantar.",
+};
+
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
+  const aviso = AVISOS[useSearchParams().get("erro") ?? ""] ?? null;
   const [erro, setErro] = useState<string | null>(null);
   const {
     register,
@@ -43,6 +67,14 @@ export default function LoginPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {aviso && (
+            <p
+              role="alert"
+              className="mb-4 rounded-md bg-alert/10 p-3 text-sm text-alert"
+            >
+              {aviso}
+            </p>
+          )}
           <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
             <div className="grid gap-1.5">
               <Label htmlFor="email" required>E-mail</Label>

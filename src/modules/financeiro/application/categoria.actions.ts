@@ -10,10 +10,9 @@ import {
   softDeleteCategoria,
 } from "@/modules/financeiro/data/categoria.repository";
 import { mensagemDeErro } from "./erros";
+import type { ActionResult } from "@/lib/action-result";
 
-export type ActionResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; erro: string };
+export type { ActionResult };
 
 export async function criarCategoriaAction(
   entrada: unknown

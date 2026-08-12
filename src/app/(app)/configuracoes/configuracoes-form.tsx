@@ -18,14 +18,26 @@ import {
 import { normalizarCEP } from "@/lib/validators/contato";
 import { buscarEnderecoPorCep } from "@/lib/format/via-cep";
 import type { Workshop } from "@/modules/workshop/domain/types";
+import type { ParametrosPatio } from "@/modules/workshop/domain/parametros";
 import { NAV_GROUPS } from "@/components/layout/nav-items";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Erro } from "@/components/ui/erro";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-function valoresIniciais(workshop: Workshop): WorkshopFormValues {
+function valoresIniciais(
+  workshop: Workshop,
+  parametros: ParametrosPatio
+): WorkshopFormValues {
   return {
     nome: workshop.nome,
     razaoSocial: workshop.razao_social ?? "",
@@ -47,8 +59,25 @@ function valoresIniciais(workshop: Workshop): WorkshopFormValues {
     valorHoraMaoObra: workshop.valor_hora_mao_obra,
     markupHabilitado: workshop.markup_habilitado,
     navOcultos: workshop.nav_ocultos ?? [],
+    // Parâmetros do pátio: passam pelo domínio para que a tela mostre os mesmos
+    // padrões que o sistema usa quando a coluna vem vazia (ou a migração 0023
+    // ainda não rodou) — sem isso o formulário abriria zerado e "salvar"
+    // gravaria zero em cima do comportamento atual.
+    galpoesQuantidade: parametros.galpoes.length,
+    galpaoCapacidade: parametros.capacidadeGalpao,
+    galpaoNomes: parametros.nomesGalpao,
+    slaAguardandoHoras: parametros.slaAguardandoHoras,
+    slaConfirmacaoHoras: parametros.slaConfirmacaoHoras,
+    slaExecucaoHoras: parametros.slaExecucaoHoras,
+    slaParadoHoras: parametros.slaParadoHoras,
+    garantiaMesesPadrao: parametros.garantiaMeses,
+    diasOsConcluidaQuadro: parametros.diasOsConcluidaQuadro,
+    categoriaPecaId: parametros.categoriaPecaId ?? "",
+    categoriaMaoObraId: parametros.categoriaMaoObraId ?? "",
   };
 }
+
+const SEM_CATEGORIA = "__auto";
 
 // Itens que a sidebar pode esconder — derivados de NAV_GROUPS para não
 // duplicar rótulos. Configurações nunca entra (o admin precisa religar os
@@ -62,9 +91,13 @@ const ITENS_SIDEBAR = NAV_GROUPS.flatMap((grupo) =>
 export function ConfiguracoesForm({
   workshop,
   logoUrl,
+  parametros,
+  categoriasReceita,
 }: {
   workshop: Workshop;
   logoUrl: string | null;
+  parametros: ParametrosPatio;
+  categoriasReceita: { id: string; nome: string }[];
 }) {
   const router = useRouter();
   const [erro, setErro] = useState<string | null>(null);
@@ -74,12 +107,17 @@ export function ConfiguracoesForm({
 
   const form = useForm<WorkshopFormValues, unknown, WorkshopInput>({
     resolver: zodResolver(workshopSchema),
-    defaultValues: valoresIniciais(workshop),
+    defaultValues: valoresIniciais(workshop, parametros),
   });
 
   const errors = form.formState.errors;
   const cepRegister = form.register("cep");
   const navOcultos = form.watch("navOcultos") ?? [];
+  // Quantos campos de nome de galpão mostrar — acompanha o número digitado.
+  const quantidadeGalpoes = Math.min(
+    Math.max(Number(form.watch("galpoesQuantidade")) || 1, 1),
+    12
+  );
 
   function toggleNav(href: string, visivel: boolean) {
     const atuais = form.getValues("navOcultos") ?? [];
@@ -382,6 +420,195 @@ export function ConfiguracoesForm({
 
         <Card>
           <CardHeader>
+            <CardTitle className="text-base">Galpões / baias</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <p className="text-xs text-muted-foreground">
+              Quantas baias a oficina tem e quantos carros cabem em cada uma. O quadro do pátio
+              usa isso para mostrar a lotação e para sugerir onde colocar o carro ao iniciar
+              uma OS.
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-1.5">
+                <Label htmlFor="galpoesQuantidade" required>
+                  Quantidade de galpões
+                </Label>
+                <Input
+                  id="galpoesQuantidade"
+                  type="number"
+                  min={1}
+                  max={12}
+                  {...form.register("galpoesQuantidade")}
+                />
+                <Erro msg={errors.galpoesQuantidade?.message} />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="galpaoCapacidade" required>
+                  Carros por galpão
+                </Label>
+                <Input
+                  id="galpaoCapacidade"
+                  type="number"
+                  min={1}
+                  max={99}
+                  {...form.register("galpaoCapacidade")}
+                />
+                <Erro msg={errors.galpaoCapacidade?.message} />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>Nome de cada galpão</Label>
+              <p className="text-xs text-muted-foreground">
+                Opcional. Em branco, aparece como &ldquo;Galpão 1&rdquo;, &ldquo;Galpão 2&rdquo;…
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {Array.from({ length: quantidadeGalpoes }, (_, i) => (
+                  <Input
+                    key={i}
+                    placeholder={`Galpão ${i + 1}`}
+                    aria-label={`Nome do galpão ${i + 1}`}
+                    {...form.register(`galpaoNomes.${i}`)}
+                  />
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Prazos e garantia</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <p className="text-xs text-muted-foreground">
+              Passado o prazo sem a OS andar, o card do pátio ganha o aviso de{" "}
+              <strong>Atenção</strong>. Serve para nada ficar esquecido — não bloqueia nada.
+            </p>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <div className="grid gap-1.5">
+                <Label htmlFor="slaAguardandoHoras" required>
+                  Aguardando (h)
+                </Label>
+                <Input
+                  id="slaAguardandoHoras"
+                  type="number"
+                  min={1}
+                  {...form.register("slaAguardandoHoras")}
+                />
+                <Erro msg={errors.slaAguardandoHoras?.message} />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="slaConfirmacaoHoras" required>
+                  Confirmação (h)
+                </Label>
+                <Input
+                  id="slaConfirmacaoHoras"
+                  type="number"
+                  min={1}
+                  {...form.register("slaConfirmacaoHoras")}
+                />
+                <Erro msg={errors.slaConfirmacaoHoras?.message} />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="slaExecucaoHoras" required>
+                  Em execução (h)
+                </Label>
+                <Input
+                  id="slaExecucaoHoras"
+                  type="number"
+                  min={1}
+                  {...form.register("slaExecucaoHoras")}
+                />
+                <Erro msg={errors.slaExecucaoHoras?.message} />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="slaParadoHoras" required>
+                  Parado (h)
+                </Label>
+                <Input
+                  id="slaParadoHoras"
+                  type="number"
+                  min={1}
+                  {...form.register("slaParadoHoras")}
+                />
+                <Erro msg={errors.slaParadoHoras?.message} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-1.5">
+                <Label htmlFor="garantiaMesesPadrao" required>
+                  Garantia do serviço (meses)
+                </Label>
+                <Input
+                  id="garantiaMesesPadrao"
+                  type="number"
+                  min={0}
+                  max={120}
+                  {...form.register("garantiaMesesPadrao")}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Carimbada ao concluir a OS. 0 desliga o aviso de garantia.
+                </p>
+                <Erro msg={errors.garantiaMesesPadrao?.message} />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="diasOsConcluidaQuadro" required>
+                  OS concluída fica no quadro (dias)
+                </Label>
+                <Input
+                  id="diasOsConcluidaQuadro"
+                  type="number"
+                  min={1}
+                  max={365}
+                  {...form.register("diasOsConcluidaQuadro")}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Depois disso ela só sai da tela do pátio — continua no histórico e no
+                  financeiro.
+                </p>
+                <Erro msg={errors.diasOsConcluidaQuadro?.message} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Categorias da conclusão</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <p className="text-xs text-muted-foreground">
+              Ao concluir a OS, cada item vira conta a receber nestas categorias. Deixando em
+              &ldquo;Automático&rdquo;, o sistema procura pelo nome (&ldquo;peça&rdquo; e
+              &ldquo;mão de obra&rdquo;) — se você renomear a categoria, escolha aqui para não
+              cair na categoria errada.
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-1.5">
+                <Label>Peças</Label>
+                <SelectCategoria
+                  valor={form.watch("categoriaPecaId") ?? ""}
+                  categorias={categoriasReceita}
+                  aoMudar={(v) => form.setValue("categoriaPecaId", v, { shouldDirty: true })}
+                  rotulo="Categoria das peças"
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label>Mão de obra / serviços</Label>
+                <SelectCategoria
+                  valor={form.watch("categoriaMaoObraId") ?? ""}
+                  categorias={categoriasReceita}
+                  aoMudar={(v) => form.setValue("categoriaMaoObraId", v, { shouldDirty: true })}
+                  rotulo="Categoria da mão de obra"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle className="text-base">Itens da barra lateral</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3">
@@ -424,6 +651,44 @@ export function ConfiguracoesForm({
   );
 }
 
-function Erro({ msg }: { msg?: string }) {
-  return <p className="text-sm text-destructive">{msg}</p>;
+/**
+ * Seletor de categoria financeira com a opção "Automático" (= não configurado,
+ * o sistema decide pelo nome). O Select do base-ui não aceita valor "", por
+ * isso o sentinela SEM_CATEGORIA vai e volta convertido.
+ */
+function SelectCategoria({
+  valor,
+  categorias,
+  aoMudar,
+  rotulo,
+}: {
+  valor: string;
+  categorias: { id: string; nome: string }[];
+  aoMudar: (valor: string) => void;
+  rotulo: string;
+}) {
+  return (
+    <Select
+      value={valor === "" ? SEM_CATEGORIA : valor}
+      onValueChange={(v) => aoMudar(v === SEM_CATEGORIA ? "" : (v ?? ""))}
+    >
+      <SelectTrigger aria-label={rotulo}>
+        <SelectValue>
+          {(v: string) =>
+            v === SEM_CATEGORIA
+              ? "Automático (pelo nome)"
+              : (categorias.find((c) => c.id === v)?.nome ?? "Automático (pelo nome)")
+          }
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={SEM_CATEGORIA}>Automático (pelo nome)</SelectItem>
+        {categorias.map((c) => (
+          <SelectItem key={c.id} value={c.id}>
+            {c.nome}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 }

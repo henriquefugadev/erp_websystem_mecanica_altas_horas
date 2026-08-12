@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Erro } from "@/components/ui/erro";
 
 const DATALIST_PECAS = "orcamento-pecas-catalogo";
 
@@ -336,6 +337,3 @@ export function NovoOrcamentoForm({
   );
 }
 
-function Erro({ msg }: { msg?: string }) {
-  return <p className="text-sm text-destructive">{msg}</p>;
-}

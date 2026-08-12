@@ -76,6 +76,17 @@ export interface Database {
           logo_path: string | null;
           chave_pix: string | null;
           pix_favorecido: string | null;
+          galpoes_quantidade: number;
+          galpao_capacidade: number;
+          galpao_nomes: string[];
+          sla_aguardando_horas: number;
+          sla_confirmacao_horas: number;
+          sla_execucao_horas: number;
+          sla_parado_horas: number;
+          garantia_meses_padrao: number;
+          dias_os_concluida_quadro: number;
+          categoria_peca_id: string | null;
+          categoria_mao_obra_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -103,6 +114,17 @@ export interface Database {
           logo_path?: string | null;
           chave_pix?: string | null;
           pix_favorecido?: string | null;
+          galpoes_quantidade?: number;
+          galpao_capacidade?: number;
+          galpao_nomes?: string[];
+          sla_aguardando_horas?: number;
+          sla_confirmacao_horas?: number;
+          sla_execucao_horas?: number;
+          sla_parado_horas?: number;
+          garantia_meses_padrao?: number;
+          dias_os_concluida_quadro?: number;
+          categoria_peca_id?: string | null;
+          categoria_mao_obra_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["workshop"]["Insert"]>;
         Relationships: [];
@@ -438,6 +460,7 @@ export interface Database {
           numero: number;
           cliente_id: string;
           veiculo_id: string;
+          titulo: string | null;
           queixa: string | null;
           descricao: string | null;
           funcionario_id: string | null;
@@ -450,6 +473,9 @@ export interface Database {
           data_pausa: string | null;
           data_conclusao: string | null;
           cliente_avisado_em: string | null;
+          garantia_meses: number;
+          garantia_ate: string | null;
+          arquivada_em: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -460,6 +486,7 @@ export interface Database {
           workshop_id: string;
           cliente_id: string;
           veiculo_id: string;
+          titulo?: string | null;
           queixa?: string | null;
           descricao?: string | null;
           funcionario_id?: string | null;
@@ -467,6 +494,7 @@ export interface Database {
           galpao?: number | null;
           motivo_parada?: MotivoParada | null;
           orcamento_id?: string | null;
+          garantia_meses?: number;
           created_by?: string | null;
         };
         Update: Partial<
@@ -475,6 +503,8 @@ export interface Database {
             data_pausa: string | null;
             data_conclusao: string | null;
             cliente_avisado_em: string | null;
+            garantia_ate: string | null;
+            arquivada_em: string | null;
             deleted_at: string | null;
           }
         >;
@@ -635,6 +665,30 @@ export interface Database {
           ordem?: number;
         };
         Update: Partial<Database["public"]["Tables"]["tipo_item_orcamento"]["Insert"]>;
+        Relationships: [];
+      };
+      servico_catalogo: {
+        Row: {
+          id: string;
+          workshop_id: string;
+          nome: string;
+          preco_padrao: number;
+          duracao_minutos: number | null;
+          ativo: boolean;
+          ordem: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workshop_id: string;
+          nome: string;
+          preco_padrao?: number;
+          duracao_minutos?: number | null;
+          ativo?: boolean;
+          ordem?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["servico_catalogo"]["Insert"]>;
         Relationships: [];
       };
       fornecedor: {
@@ -1048,6 +1102,16 @@ export interface Database {
       estornar_pagamento: {
         Args: { p_pagamento_id: string; p_estornado_por: string };
         Returns: void;
+      };
+      receber_parcelas_da_os: {
+        Args: {
+          p_ordem_id: string;
+          p_data_pagamento: string;
+          p_forma_pagamento: FormaPagamento;
+          p_observacoes: string | null;
+          p_created_by: string;
+        };
+        Returns: number;
       };
       financeiro_fluxo_caixa: {
         Args: { p_de: string; p_ate: string };

@@ -26,7 +26,7 @@ export type OrcamentoComRelacoes = VwOrcamento & {
     quilometragem: number | null;
   } | null;
   orcamento_item: OrcamentoItem[];
-  ordem_servico: { numero: number } | null;
+  ordem_servico: { numero: number; funcionario: { nome: string } | null } | null;
 };
 
 export type OrcamentoComCliente = VwOrcamento & {

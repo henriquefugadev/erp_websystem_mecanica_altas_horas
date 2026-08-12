@@ -10,10 +10,9 @@ import {
   softDeleteFornecedor,
 } from "@/modules/fornecedores/data/fornecedor.repository";
 import { mensagemDeErro } from "@/modules/financeiro/application/erros";
+import type { ActionResult } from "@/lib/action-result";
 
-export type ActionResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; erro: string };
+export type { ActionResult };
 
 export async function criarFornecedorAction(
   entrada: unknown

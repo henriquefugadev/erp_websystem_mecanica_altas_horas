@@ -7,7 +7,10 @@ export const clienteSchema = z
   .object({
     tipo: z.enum(["PF", "PJ"]),
     nome: z.string().trim().min(1, "Nome é obrigatório"),
-    documento: z.string().trim().min(1, "Documento é obrigatório"),
+    // Só nome e telefone são obrigatórios. Documento e endereço ficam para
+    // depois — a Michele completa quando (e se) precisar emitir nota. Cada
+    // campo abaixo só é validado quando de fato preenchido.
+    documento: z.string().trim().optional().or(z.literal("")),
     telefone: z
       .string()
       .trim()
@@ -23,10 +26,11 @@ export const clienteSchema = z
     cep: z
       .string()
       .trim()
-      .refine(validarCEP, "CEP inválido")
-      .transform(normalizarCEP),
-    logradouro: z.string().trim().min(1, "Endereço é obrigatório"),
-    numero: z.string().trim().min(1, "Número é obrigatório"),
+      .refine((v) => v === "" || validarCEP(v), "CEP inválido")
+      .transform((v) => (v === "" ? undefined : normalizarCEP(v)))
+      .optional(),
+    logradouro: z.string().trim().optional().or(z.literal("")),
+    numero: z.string().trim().optional().or(z.literal("")),
     complemento: z.string().trim().optional().or(z.literal("")),
     bairro: z.string().trim().optional().or(z.literal("")),
     cidade: z.string().trim().optional().or(z.literal("")),
@@ -42,7 +46,7 @@ export const clienteSchema = z
     consenteSms: z.boolean().default(false),
   })
   .superRefine((dados, ctx) => {
-    if (!validarDocumento(dados.tipo, dados.documento)) {
+    if (dados.documento && !validarDocumento(dados.tipo, dados.documento)) {
       ctx.addIssue({
         code: "custom",
         path: ["documento"],
@@ -52,7 +56,7 @@ export const clienteSchema = z
   })
   .transform((dados) => ({
     ...dados,
-    documento: normalizarDocumento(dados.documento),
+    documento: dados.documento ? normalizarDocumento(dados.documento) : undefined,
   }));
 
 export type ClienteInput = z.infer<typeof clienteSchema>;

@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Erro } from "@/components/ui/erro";
 
 export function RegistrarPagamentoDialog({
   parcelaId,
@@ -170,6 +171,3 @@ export function RegistrarPagamentoDialog({
   );
 }
 
-function Erro({ msg }: { msg?: string }) {
-  return <p className="text-sm text-destructive">{msg}</p>;
-}

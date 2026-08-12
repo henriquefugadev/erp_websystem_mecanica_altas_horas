@@ -2,30 +2,24 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getSessaoAtual } from "@/lib/supabase/sessao";
+
 import { workshopSchema } from "@/lib/validators/workshop.schema";
 import {
   atualizarConfiguracao,
   enviarLogo,
   removerLogo,
 } from "@/modules/workshop/data/workshop.repository";
+import { exigirAdmin, type ActionResult } from "@/lib/action-result";
 
-export type ActionResult<T> = { ok: true; data: T } | { ok: false; erro: string };
+export type { ActionResult };
 
 const TIPOS_ACEITOS = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
 const TAMANHO_MAXIMO = 4 * 1024 * 1024; // 4MB
 
-// Configurações é restrito ao admin (Jadson) — RLS já bloqueia a escrita no
-// banco, isso barra mais cedo com mensagem clara em vez de deixar o Postgres
-// rejeitar silenciosamente (update sem policy afeta 0 linhas, sem erro).
-async function exigirAdmin() {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false as const, erro: "Sessão expirada. Faça login novamente." };
-  if (sessao.papel !== "admin") {
-    return { ok: false as const, erro: "Só o administrador pode alterar as configurações." };
-  }
-  return { ok: true as const, sessao };
-}
+// Configurações é restrito ao admin (Jadson) — o guard mora em
+// @/lib/action-result. A RLS já bloqueia a escrita no banco; barrar aqui dá
+// mensagem clara em vez de o Postgres rejeitar silenciosamente (update sem
+// policy afeta 0 linhas, sem erro).
 
 export async function atualizarConfiguracaoAction(
   entrada: unknown

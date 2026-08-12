@@ -52,14 +52,6 @@ export const contaSchema = z
         message: "A soma das parcelas deve ser igual ao valor total.",
       });
     }
-
-    if (dados.tipo === "pagar" && !dados.fornecedorNome) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["fornecedorNome"],
-        message: "Fornecedor é obrigatório para contas a pagar.",
-      });
-    }
   });
 
 export type ContaInput = z.infer<typeof contaSchema>;

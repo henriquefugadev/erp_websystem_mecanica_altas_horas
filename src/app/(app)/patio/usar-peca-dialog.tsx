@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Erro } from "@/components/ui/erro";
 
 export interface PecaOpcao {
   id: string;
@@ -148,6 +149,3 @@ export function UsarPecaDialog({ ordemId, pecas }: { ordemId: string; pecas: Pec
   );
 }
 
-function Erro({ msg }: { msg?: string }) {
-  return <p className="text-sm text-destructive">{msg}</p>;
-}

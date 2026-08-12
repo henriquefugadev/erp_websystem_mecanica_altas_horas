@@ -12,6 +12,18 @@ export const ordemServicoSchema = z.object({
 
 export type OrdemServicoInput = z.infer<typeof ordemServicoSchema>;
 
+// Edição de uma OS já aberta: só o que muda no dia a dia (queixa, observações e
+// técnico responsável). Cliente e veículo ficam fixos — são definidos na
+// entrada e trocá-los seria refazer a OS, não editar.
+export const editarOrdemSchema = z.object({
+  titulo: z.string().trim().max(120, "Nome muito longo").optional().or(z.literal("")),
+  queixa: z.string().trim().optional().or(z.literal("")),
+  descricao: z.string().trim().optional().or(z.literal("")),
+  funcionarioId: z.string().trim().optional().or(z.literal("")),
+});
+
+export type EditarOrdemInput = z.infer<typeof editarOrdemSchema>;
+
 // Cada item vira sua própria conta a receber no Financeiro (ex.: "Mão de
 // obra" R$100 + "Peças" R$100), ligadas à mesma OS.
 export const itemConclusaoSchema = z.object({

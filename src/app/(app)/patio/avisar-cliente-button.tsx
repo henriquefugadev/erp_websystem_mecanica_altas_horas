@@ -67,6 +67,7 @@ export function AvisarClienteButton({
       <Button
         size="sm"
         variant="outline"
+        nativeButton={false}
         disabled={processando}
         onClick={() => void registrar()}
         render={<a href={link} target="_blank" rel="noopener noreferrer" />}

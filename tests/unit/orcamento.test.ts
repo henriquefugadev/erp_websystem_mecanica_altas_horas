@@ -6,6 +6,8 @@ import {
   calcularMargemPercentual,
   calcularSubtotalItem,
   calcularTotalOrcamento,
+  totalDaLinhaParaUnitario,
+  unitarioParaTotalDaLinha,
 } from "@/modules/orcamento/domain/calculo";
 
 describe("calcularSubtotalItem", () => {
@@ -41,6 +43,43 @@ describe("calcularTotalOrcamento", () => {
       { quantidade: 1, precoUnitario: 200, desconto: 25 },
     ]);
     expect(total).toBe(260);
+  });
+});
+
+describe("totalDaLinhaParaUnitario", () => {
+  it("divide o total da linha pela quantidade", () => {
+    expect(totalDaLinhaParaUnitario(160, 4)).toBe(40);
+  });
+
+  it("quantidade <= 0 devolve o próprio total (sem dividir por zero)", () => {
+    expect(totalDaLinhaParaUnitario(160, 0)).toBe(160);
+    expect(totalDaLinhaParaUnitario(160, -1)).toBe(160);
+  });
+
+  it("arredonda o unitário ao centavo quando não divide exato", () => {
+    // 100 / 3 = 33,333… → 33,33
+    expect(totalDaLinhaParaUnitario(100, 3)).toBe(33.33);
+  });
+});
+
+describe("unitarioParaTotalDaLinha", () => {
+  it("multiplica o unitário pela quantidade", () => {
+    expect(unitarioParaTotalDaLinha(40, 4)).toBe(160);
+  });
+
+  it("arredonda o total ao centavo mais próximo", () => {
+    expect(unitarioParaTotalDaLinha(0.1, 3)).toBe(0.3);
+  });
+
+  it("faz a volta com o unitário arredondado (round-trip aproximado)", () => {
+    // 100/3 → 33,33 → ×3 = 99,99 (o centavo de diferença é esperado)
+    const unitario = totalDaLinhaParaUnitario(100, 3);
+    expect(unitarioParaTotalDaLinha(unitario, 3)).toBe(99.99);
+  });
+
+  it("round-trip exato quando a quantidade divide o total", () => {
+    const unitario = totalDaLinhaParaUnitario(160, 4);
+    expect(unitarioParaTotalDaLinha(unitario, 4)).toBe(160);
   });
 });
 

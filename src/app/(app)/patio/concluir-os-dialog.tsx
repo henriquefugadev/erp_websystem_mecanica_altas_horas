@@ -13,8 +13,14 @@ import {
   concluirOrdemAction,
 } from "@/modules/patio/application/ordem-servico.actions";
 import { agruparValoresPorCategoria } from "@/modules/orcamento/domain/calculo";
-import { formatarDinheiro, formatarPlaca, hojeSaoPaulo } from "@/lib/format";
+import {
+  calcularGarantiaAte,
+  escolherCategoriaDoItem,
+  type ParametrosPatio,
+} from "@/modules/workshop/domain/parametros";
+import { formatarData, formatarDinheiro, formatarPlaca, hojeSaoPaulo } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { Erro } from "@/components/ui/erro";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -37,15 +43,6 @@ type FormValues = z.input<typeof revisaoConclusaoSchema>;
 type FormOutput = z.output<typeof revisaoConclusaoSchema>;
 type ItemForm = NonNullable<FormValues["itens"]>[number];
 
-function categoriaSugerida(categoriasReceita: { id: string; nome: string }[]): string {
-  const maoDeObra = categoriasReceita.find((c) => c.nome.trim().toLowerCase() === "mão de obra");
-  return maoDeObra?.id ?? categoriasReceita[0]?.id ?? "";
-}
-
-function categoriaPeca(categoriasReceita: { id: string; nome: string }[], fallback: string): string {
-  return categoriasReceita.find((c) => /pe[çc]a/i.test(c.nome))?.id ?? fallback;
-}
-
 function linhaVazia(categoriaId: string): ItemForm {
   return { descricao: "", categoriaId, valor: "" };
 }
@@ -56,12 +53,14 @@ export function ConcluirOsDialog({
   cliente,
   veiculo,
   categoriasReceita,
+  parametros,
 }: {
   ordemId: string;
   numero: number;
   cliente: { nome: string; telefone: string } | null;
   veiculo: { placa: string; modelo: string; marca: string | null; cor: string | null } | null;
   categoriasReceita: { id: string; nome: string }[];
+  parametros: ParametrosPatio;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -69,8 +68,16 @@ export function ConcluirOsDialog({
   const [enviando, setEnviando] = useState(false);
   const [carregando, setCarregando] = useState(false);
 
-  const catServico = categoriaSugerida(categoriasReceita);
-  const catPeca = categoriaPeca(categoriasReceita, catServico);
+  // Categorias escolhidas nas Configurações; sem escolha, o domínio cai no
+  // critério antigo (procurar pelo nome), então nada muda para quem não mexeu.
+  const catServico = escolherCategoriaDoItem("servico", categoriasReceita, parametros);
+  const catPeca = escolherCategoriaDoItem("peca", categoriasReceita, parametros);
+
+  // Data-limite da garantia só para exibir. Quem carimba o valor real é a RPC
+  // concluir_ordem_servico — as duas leem os mesmos meses configurados.
+  const garantiaAte = formatarData(
+    calcularGarantiaAte(hojeSaoPaulo(), parametros.garantiaMeses)
+  );
 
   const form = useForm<FormValues, unknown, FormOutput>({
     resolver: zodResolver(revisaoConclusaoSchema),
@@ -264,6 +271,15 @@ export function ConcluirOsDialog({
             )}
           </div>
 
+          {parametros.garantiaMeses > 0 && (
+            <p className="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              Garantia de {parametros.garantiaMeses}{" "}
+              {parametros.garantiaMeses === 1 ? "mês" : "meses"} — o cliente fica coberto até{" "}
+              <span className="font-medium text-foreground">{garantiaAte}</span>. Fica salvo na OS
+              e no histórico do cliente.
+            </p>
+          )}
+
           {erro && <p className="text-sm text-destructive">{erro}</p>}
 
           <DialogFooter>
@@ -279,10 +295,6 @@ export function ConcluirOsDialog({
       </DialogContent>
     </Dialog>
   );
-}
-
-function Erro({ msg }: { msg?: string }) {
-  return <p className="text-sm text-destructive">{msg}</p>;
 }
 
 function Info({ rotulo, valor }: { rotulo: string; valor: string }) {

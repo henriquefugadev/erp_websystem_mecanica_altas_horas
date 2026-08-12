@@ -10,8 +10,13 @@ export const MOTIVO_PARADA_LABEL: Record<MotivoParada, string> = {
   outro: "Parado",
 };
 
-export const GALPOES = [1, 2, 3] as const;
-export type Galpao = (typeof GALPOES)[number];
+// Galpão é só o número da baia (1..n). A quantidade e a capacidade passaram a
+// ser configuráveis (workshop.galpoes_quantidade / galpao_capacidade), então o
+// tipo não pode mais ser a união fechada 1|2|3 — quem valida a faixa é
+// `parametrosPatio`. GALPOES/CAPACIDADE_GALPAO continuam aqui como o padrão
+// histórico usado quando não há configuração carregada.
+export type Galpao = number;
+export const GALPOES: Galpao[] = [1, 2, 3];
 export const CAPACIDADE_GALPAO = 10;
 
 export const STATUS_OS_LABEL: Record<StatusOS, string> = {

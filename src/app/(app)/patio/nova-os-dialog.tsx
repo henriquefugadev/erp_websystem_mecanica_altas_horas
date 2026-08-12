@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ClienteCombobox } from "@/components/crm/cliente-combobox";
+import { Erro } from "@/components/ui/erro";
 
 export interface FuncionarioOpcao {
   id: string;
@@ -214,6 +215,3 @@ export function NovaOsDialog({
   );
 }
 
-function Erro({ msg }: { msg?: string }) {
-  return <p className="text-sm text-destructive">{msg}</p>;
-}

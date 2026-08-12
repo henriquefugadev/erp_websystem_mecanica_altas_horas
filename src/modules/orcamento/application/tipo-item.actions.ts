@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getSessaoAtual } from "@/lib/supabase/sessao";
+
 import { tipoItemSchema } from "@/lib/validators/tipo-item.schema";
 import {
   atualizarTipoItem,
@@ -10,19 +10,14 @@ import {
   excluirTipoItem,
 } from "@/modules/orcamento/data/tipo-item.repository";
 import { mensagemDeErro } from "@/modules/financeiro/application/erros";
+import { exigirAdmin, type ActionResult } from "@/lib/action-result";
 
-export type ActionResult<T> = { ok: true; data: T } | { ok: false; erro: string };
+export type { ActionResult };
 
-// Parametrização é de configuração — só o admin (Jadson) altera. A RLS já
-// bloqueia a escrita, isso barra mais cedo com mensagem clara.
-async function exigirAdmin() {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false as const, erro: "Sessão expirada. Faça login novamente." };
-  if (sessao.papel !== "admin") {
-    return { ok: false as const, erro: "Só o administrador pode alterar os tipos." };
-  }
-  return { ok: true as const, sessao };
-}
+// Parametrização é de configuração — só o admin (Jadson) altera. O guard mora
+// em @/lib/action-result (a RLS já bloqueia a escrita; isso barra mais cedo
+// com mensagem clara).
+const ACAO = "alterar os tipos";
 
 function revalidar() {
   revalidatePath("/configuracoes");
@@ -30,7 +25,7 @@ function revalidar() {
 }
 
 export async function criarTipoItemAction(entrada: unknown): Promise<ActionResult<null>> {
-  const guard = await exigirAdmin();
+  const guard = await exigirAdmin(ACAO);
   if (!guard.ok) return guard;
 
   const parsed = tipoItemSchema.safeParse(entrada);
@@ -52,7 +47,7 @@ export async function atualizarTipoItemAction(
   id: string,
   entrada: unknown
 ): Promise<ActionResult<null>> {
-  const guard = await exigirAdmin();
+  const guard = await exigirAdmin(ACAO);
   if (!guard.ok) return guard;
 
   const parsed = tipoItemSchema.safeParse(entrada);
@@ -73,7 +68,7 @@ export async function atualizarTipoItemAction(
 export async function excluirTipoItemAction(
   id: string
 ): Promise<ActionResult<{ desativado: boolean }>> {
-  const guard = await exigirAdmin();
+  const guard = await exigirAdmin(ACAO);
   if (!guard.ok) return guard;
 
   const supabase = await createClient();
