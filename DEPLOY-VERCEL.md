@@ -125,10 +125,19 @@ número menor para o maior:
 0024_historico_import.sql
 0025_os_arquivamento.sql
 0026_receber_parcelas_os.sql
+0027_indices_historico_parcelas.sql
 ```
 
 > ⚠️ **A 0026 não é opcional.** O "Receber pagamento" do card concluído chama a
 > função `receber_parcelas_da_os` criada nela. Sem rodar, o botão devolve erro.
+>
+> A 0027 só cria índices: não roda risco de quebrar nada, e é o que segura a
+> velocidade do histórico do cliente agora que a base tem o histórico antigo.
+
+**Situação verificada em 12/08/2026** no banco de vocês: 0021, 0022, 0023 e
+0025 **já rodaram**. Faltam a **0026** e a **0027**. (A 0024 aparece como não
+aplicada na checagem acima, mas o histórico já está importado — confirme com o
+SQL do 2.1 antes de rodá-la, para não duplicar.)
 
 > ⚠️ **Não pule a ordem.** A 0023 depende de tabelas criadas na 0017, e a 0024
 > depende da 0023. Rodar fora de ordem dá erro de coluna inexistente.
