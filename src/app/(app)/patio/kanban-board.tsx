@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { DragEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -71,7 +71,6 @@ export function KanbanBoard({
   parametros: ParametrosPatio;
 }) {
   const router = useRouter();
-  const [orcamentoAbertoPorId, setOrcamentoAbertoPorId] = useState<Record<string, boolean>>({});
 
   // Uma passada só para montar as 5 colunas, em vez de um filter por coluna.
   // `agora` acompanha os dados: recalcula quando o quadro é recarregado, e não
@@ -196,10 +195,6 @@ export function KanbanBoard({
     };
   }
 
-  function definirOrcamentoAberto(ordemId: string, aberto: boolean) {
-    setOrcamentoAbertoPorId((atual) => ({ ...atual, [ordemId]: aberto }));
-  }
-
   return (
     <div className="grid gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -291,8 +286,6 @@ export function KanbanBoard({
                     onConfirmarCliente={() => void confirmarCliente(ordem.id)}
                     onMoverGalpao={(g) => void moverGalpao(ordem.id, g)}
                     onArquivar={() => void arquivar(ordem.id, ordem.numero)}
-                    orcamentoAberto={orcamentoAbertoPorId[ordem.id] ?? false}
-                    onOrcamentoAbertoChange={(aberto) => definirOrcamentoAberto(ordem.id, aberto)}
                   />
                 ))}
               </div>

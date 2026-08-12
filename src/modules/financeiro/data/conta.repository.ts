@@ -14,6 +14,8 @@ export interface FiltrosConta {
   de?: string;
   ate?: string;
   busca?: string;
+  /** Recorta a listagem — ver lib/paginacao.ts. Sem valor, devolve tudo. */
+  limite?: number;
 }
 
 export async function listarContas(supabase: Client, filtros: FiltrosConta = {}) {
@@ -30,6 +32,7 @@ export async function listarContas(supabase: Client, filtros: FiltrosConta = {})
   if (filtros.busca && filtros.busca.trim() !== "") {
     query = query.ilike("descricao", `%${filtros.busca.trim()}%`);
   }
+  if (filtros.limite) query = query.limit(filtros.limite);
 
   const { data, error } = await query;
   if (error) throw error;

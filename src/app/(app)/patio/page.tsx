@@ -34,17 +34,23 @@ export default async function PatioPage() {
   // botão "Usar peça", que nem aparece quando a lista vem vazia.
   const usaEstoque = !(workshop?.nav_ocultos ?? []).includes("/estoque");
 
-  const [ordens, categoriasReceita, funcionarios, pecas, diagnosticoPorOs, conclusaoPorOs, tipos, servicos] =
-    await Promise.all([
-      listarOrdensDoQuadro(supabase, parametros.diasOsConcluidaQuadro),
-      listarCategorias(supabase, "receita"),
-      listarFuncionarios(supabase, true),
-      usaEstoque ? listarPecas(supabase, true) : Promise.resolve([]),
-      contarDiagnosticoPorOs(supabase),
-      valoresConclusaoPorOs(supabase, parametros),
-      listarTiposItemOrcamento(supabase, true),
-      listarServicosCatalogo(supabase, true),
-    ]);
+  const [ordens, categoriasReceita, funcionarios, pecas, tipos, servicos] = await Promise.all([
+    listarOrdensDoQuadro(supabase, parametros.diasOsConcluidaQuadro),
+    listarCategorias(supabase, "receita"),
+    listarFuncionarios(supabase, true),
+    usaEstoque ? listarPecas(supabase, true) : Promise.resolve([]),
+    listarTiposItemOrcamento(supabase, true),
+    listarServicosCatalogo(supabase, true),
+  ]);
+
+  // Estas duas dependem de quais OS estão no quadro, então saem numa segunda
+  // leva. Custa uma ida a mais ao banco e economiza duas varreduras de tabela
+  // inteira (rascunhos e contas a receber) que só crescem com o uso.
+  const ordemIds = ordens.map((ordem) => ordem.id);
+  const [diagnosticoPorOs, conclusaoPorOs] = await Promise.all([
+    contarDiagnosticoPorOs(supabase, ordemIds),
+    valoresConclusaoPorOs(supabase, ordemIds, parametros),
+  ]);
 
   return (
     <KanbanBoard

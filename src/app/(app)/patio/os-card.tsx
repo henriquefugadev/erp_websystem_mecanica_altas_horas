@@ -1,8 +1,20 @@
 "use client";
 
-import { Archive, ArrowLeft, ArrowRight, Building2, Clock, FileText, User, Wrench } from "lucide-react";
+import {
+  Archive,
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  Clock,
+  FileText,
+  Pencil,
+  User,
+  Wallet,
+  Wrench,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { MontarAoAbrir } from "@/components/ui/montar-ao-abrir";
 import {
   Select,
   SelectContent,
@@ -52,8 +64,6 @@ export function OsCard({
   onConfirmarCliente,
   onMoverGalpao,
   onArquivar,
-  orcamentoAberto,
-  onOrcamentoAbertoChange,
 }: {
   ordem: OrdemComRelacoes;
   nivel: NivelAtencao;
@@ -77,8 +87,6 @@ export function OsCard({
   onConfirmarCliente: () => void;
   onMoverGalpao: (galpao: Galpao) => void;
   onArquivar: () => void;
-  orcamentoAberto: boolean;
-  onOrcamentoAbertoChange: (open: boolean) => void;
 }) {
   const pagamento = statusPagamento(ordem.conta_financeira);
   const podeReceber =
@@ -121,15 +129,25 @@ export function OsCard({
               {ordem.titulo || nomeVeiculo}
             </p>
             {podeEditar && (
-              <EditarOsDialog
-                ordemId={ordem.id}
-                numero={ordem.numero}
-                funcionarios={funcionarios}
-                tituloInicial={ordem.titulo}
-                queixaInicial={ordem.queixa}
-                descricaoInicial={ordem.descricao}
-                funcionarioIdInicial={ordem.funcionario_id}
-              />
+              <MontarAoAbrir
+                size="icon-sm"
+                variant="ghost"
+                aria-label={`Editar OS #${ordem.numero}`}
+                rotulo={<Pencil className="size-4" />}
+              >
+                {(controle) => (
+                  <EditarOsDialog
+                    ordemId={ordem.id}
+                    numero={ordem.numero}
+                    funcionarios={funcionarios}
+                    tituloInicial={ordem.titulo}
+                    queixaInicial={ordem.queixa}
+                    descricaoInicial={ordem.descricao}
+                    funcionarioIdInicial={ordem.funcionario_id}
+                    {...controle}
+                  />
+                )}
+              </MontarAoAbrir>
             )}
           </div>
           <p className="text-xs text-muted-foreground">
@@ -250,26 +268,32 @@ export function OsCard({
             botão — o dialog é montado no primeiro clique. Com 20 OS na tela,
             isso deixa de criar 20 formulários que ninguém abriu. O botão daqui
             é visualmente idêntico ao gatilho que o próprio dialog renderiza. */}
-        {podeOrcar &&
-          (orcamentoAberto ? (
-            <OrcamentoDialog
-              ordemId={ordem.id}
-              numero={ordem.numero}
-              statusOs={ordem.status}
-              pecas={pecas}
-              markup={markup}
-              markupHabilitado={markupHabilitado}
-              tipos={tipos}
-              servicos={servicos}
-              open
-              onOpenChange={onOrcamentoAbertoChange}
-            />
-          ) : (
-            <Button size="sm" variant="outline" onClick={() => onOrcamentoAbertoChange(true)}>
-              <FileText className="size-4" />
-              Orçamento
-            </Button>
-          ))}
+        {podeOrcar && (
+          <MontarAoAbrir
+            size="sm"
+            variant="outline"
+            rotulo={
+              <>
+                <FileText className="size-4" />
+                Orçamento
+              </>
+            }
+          >
+            {(controle) => (
+              <OrcamentoDialog
+                ordemId={ordem.id}
+                numero={ordem.numero}
+                statusOs={ordem.status}
+                pecas={pecas}
+                markup={markup}
+                markupHabilitado={markupHabilitado}
+                tipos={tipos}
+                servicos={servicos}
+                {...controle}
+              />
+            )}
+          </MontarAoAbrir>
+        )}
         {ordem.status === "aguardando" && (
           <>
             <Button
@@ -338,15 +362,39 @@ export function OsCard({
                 vazia, mas só depois de montar o formulário. Com o Estoque
                 desligado nas Configurações, `pecas` chega vazio e agora nem o
                 componente é criado. */}
-            {pecas.length > 0 && <UsarPecaDialog ordemId={ordem.id} pecas={pecas} />}
-            <ConcluirOsDialog
-              ordemId={ordem.id}
-              numero={ordem.numero}
-              cliente={ordem.cliente}
-              veiculo={ordem.veiculo}
-              categoriasReceita={categoriasReceita}
-              parametros={parametros}
-            />
+            {pecas.length > 0 && (
+              <MontarAoAbrir
+                size="sm"
+                variant="outline"
+                rotulo={
+                  <>
+                    <Wrench className="size-4" />
+                    Usar peça
+                  </>
+                }
+              >
+                {(controle) => (
+                  <UsarPecaDialog ordemId={ordem.id} pecas={pecas} {...controle} />
+                )}
+              </MontarAoAbrir>
+            )}
+            <MontarAoAbrir
+              size="sm"
+              className="bg-action text-action-foreground hover:bg-action/90"
+              rotulo="Concluir"
+            >
+              {(controle) => (
+                <ConcluirOsDialog
+                  ordemId={ordem.id}
+                  numero={ordem.numero}
+                  cliente={ordem.cliente}
+                  veiculo={ordem.veiculo}
+                  categoriasReceita={categoriasReceita}
+                  parametros={parametros}
+                  {...controle}
+                />
+              )}
+            </MontarAoAbrir>
           </>
         )}
         {ordem.status === "concluido" && (
@@ -361,7 +409,24 @@ export function OsCard({
               jaAvisado={ordem.cliente_avisado_em !== null}
             />
             {podeReceber && (
-              <ReceberPagamentoDialog ordemId={ordem.id} numero={ordem.numero} />
+              <MontarAoAbrir
+                size="sm"
+                variant="outline"
+                rotulo={
+                  <>
+                    <Wallet className="size-4" />
+                    Receber pagamento
+                  </>
+                }
+              >
+                {(controle) => (
+                  <ReceberPagamentoDialog
+                    ordemId={ordem.id}
+                    numero={ordem.numero}
+                    {...controle}
+                  />
+                )}
+              </MontarAoAbrir>
             )}
             {/* Tira a OS do quadro na hora (mesmo efeito da limpeza de N dias,
                 sob demanda). Não apaga: continua no histórico e nos relatórios. */}
@@ -389,7 +454,22 @@ export function OsCard({
                 vazia, mas só depois de montar o formulário. Com o Estoque
                 desligado nas Configurações, `pecas` chega vazio e agora nem o
                 componente é criado. */}
-            {pecas.length > 0 && <UsarPecaDialog ordemId={ordem.id} pecas={pecas} />}
+            {pecas.length > 0 && (
+              <MontarAoAbrir
+                size="sm"
+                variant="outline"
+                rotulo={
+                  <>
+                    <Wrench className="size-4" />
+                    Usar peça
+                  </>
+                }
+              >
+                {(controle) => (
+                  <UsarPecaDialog ordemId={ordem.id} pecas={pecas} {...controle} />
+                )}
+              </MontarAoAbrir>
+            )}
             <Button size="sm" variant="ghost" onClick={onCancelar}>
               Cancelar
             </Button>

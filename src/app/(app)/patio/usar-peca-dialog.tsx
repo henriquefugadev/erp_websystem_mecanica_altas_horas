@@ -44,9 +44,22 @@ function valoresIniciais(): FormValues {
   return { pecaId: "", quantidade: "" };
 }
 
-export function UsarPecaDialog({ ordemId, pecas }: { ordemId: string; pecas: PecaOpcao[] }) {
+export function UsarPecaDialog({
+  ordemId,
+  pecas,
+  open: openControlado,
+  onOpenChange,
+}: {
+  ordemId: string;
+  pecas: PecaOpcao[];
+  // Ver ReceberPagamentoDialog: opcionais, para o card poder montar sob demanda.
+  open?: boolean;
+  onOpenChange?: (aberto: boolean) => void;
+}) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [openInterno, setOpenInterno] = useState(false);
+  const open = openControlado ?? openInterno;
+  const setOpen = onOpenChange ?? setOpenInterno;
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 

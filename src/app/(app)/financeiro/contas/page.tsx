@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/financeiro/status-badge";
+import { MostrarMais } from "@/components/ui/mostrar-mais";
 import { formatarData, formatarDinheiro } from "@/lib/format";
+import { limiteDaUrl, recortar } from "@/lib/paginacao";
 import type { StatusFinanceiro, TipoContaFinanceira } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
 
@@ -24,15 +26,21 @@ export default async function ContasPage({
     tipo?: TipoContaFinanceira | "todos";
     status?: StatusFinanceiro | "todos";
     busca?: string;
+    mostrar?: string;
   }>;
 }) {
-  const { tipo, status, busca } = await searchParams;
+  const { tipo, status, busca, mostrar } = await searchParams;
+  const limite = limiteDaUrl(mostrar);
   const supabase = await createClient();
-  const contas = await listarContas(supabase, {
-    tipo: tipo === "todos" ? undefined : tipo,
-    status: status === "todos" ? undefined : status,
-    busca,
-  });
+  const { itens: contas, temMais } = recortar(
+    await listarContas(supabase, {
+      tipo: tipo === "todos" ? undefined : tipo,
+      status: status === "todos" ? undefined : status,
+      busca,
+      limite: limite + 1,
+    }),
+    limite
+  );
 
   return (
     <div className="grid gap-6">
@@ -134,6 +142,14 @@ export default async function ContasPage({
           ))}
         </TableBody>
       </Table>
+
+      <MostrarMais
+        mostrando={contas.length}
+        temMais={temMais}
+        limite={limite}
+        params={{ tipo, status, busca }}
+        substantivo="contas"
+      />
     </div>
   );
 }

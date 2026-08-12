@@ -4,23 +4,26 @@ import type { ClienteInput, ClienteRapidoOutput } from "@/lib/validators/cliente
 
 type Client = SupabaseClient<Database>;
 
-export async function listarClientes(supabase: Client, busca?: string) {
+// `limite` recorta a listagem (ver lib/paginacao.ts). Quem pagina pede uma linha
+// a mais do que vai mostrar, para saber se ainda há registros adiante; por isso
+// o limite chega aqui já somado. Sem limite, devolve tudo — é o que os pontos
+// que não são listagem de tela (ex.: combobox, que já corta em memória) esperam.
+export async function listarClientes(supabase: Client, busca?: string, limite?: number) {
   if (busca && busca.trim() !== "") {
     // RPC public.buscar_clientes (0001_init.sql): busca tolerante a
     // acento/caixa via unaccent(), respeitando RLS normalmente.
-    const { data, error } = await supabase.rpc("buscar_clientes", {
-      p_termo: busca.trim(),
-    });
+    let query = supabase.rpc("buscar_clientes", { p_termo: busca.trim() });
+    if (limite) query = query.limit(limite);
+
+    const { data, error } = await query;
     if (error) throw error;
     return data;
   }
 
-  const { data, error } = await supabase
-    .from("cliente")
-    .select("*")
-    .is("deleted_at", null)
-    .order("nome");
+  let query = supabase.from("cliente").select("*").is("deleted_at", null).order("nome");
+  if (limite) query = query.limit(limite);
 
+  const { data, error } = await query;
   if (error) throw error;
   return data;
 }

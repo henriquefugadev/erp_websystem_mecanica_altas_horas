@@ -42,9 +42,23 @@ function valoresIniciais(): FormValues {
   return { dataPagamento: hojeSaoPaulo(), formaPagamento: "dinheiro", observacoes: "" };
 }
 
-export function ReceberPagamentoDialog({ ordemId, numero }: { ordemId: string; numero: number }) {
+export function ReceberPagamentoDialog({
+  ordemId,
+  numero,
+  open: openControlado,
+  onOpenChange,
+}: {
+  ordemId: string;
+  numero: number;
+  // Opcionais: quando o card monta o dialog só no clique (MontarAoAbrir), quem
+  // manda no aberto/fechado é ele. Sem essas props, o dialog cuida de si.
+  open?: boolean;
+  onOpenChange?: (aberto: boolean) => void;
+}) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [openInterno, setOpenInterno] = useState(false);
+  const open = openControlado ?? openInterno;
+  const setOpen = onOpenChange ?? setOpenInterno;
   const [carregando, setCarregando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);

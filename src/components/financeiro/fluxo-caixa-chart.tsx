@@ -1,78 +1,37 @@
 "use client";
 
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { formatarDinheiro } from "@/lib/format";
+import dynamic from "next/dynamic";
 import type { PontoFluxoCaixa } from "@/modules/financeiro/data/dashboard.repository";
 
-const formatadorEixo = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
+const ALTURA = 280;
 
-function formatarDiaEixo(dia: string): string {
-  return `${dia.slice(8, 10)}/${dia.slice(5, 7)}`;
-}
+/**
+ * O gráfico é o item mais pesado do sistema: a Recharts sozinha respondia por
+ * ~113 kB do JS da rota /financeiro, que era a mais pesada do app. Ela desce em
+ * um pedaço separado, depois da tela aparecer — os KPIs, o resumo por período e
+ * a inadimplência (o que a oficina realmente lê primeiro) não esperam por ela.
+ *
+ * `ssr: false` porque o ResponsiveContainer precisa da largura real do elemento;
+ * renderizar no servidor produz markup que é descartado na hidratação.
+ *
+ * O placeholder tem a mesma altura do gráfico para a página não pular quando
+ * ele entra.
+ */
+const Grafico = dynamic(
+  () => import("./fluxo-caixa-chart-impl").then((m) => m.FluxoCaixaChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        style={{ height: ALTURA }}
+        className="flex items-center justify-center text-sm text-muted-foreground"
+      >
+        Carregando o gráfico…
+      </div>
+    ),
+  }
+);
 
 export function FluxoCaixaChart({ dados }: { dados: PontoFluxoCaixa[] }) {
-  return (
-    <ResponsiveContainer width="100%" height={280}>
-      <BarChart data={dados} barGap={2} barCategoryGap="20%">
-        <CartesianGrid vertical={false} stroke="var(--border)" strokeWidth={1} />
-        <XAxis
-          dataKey="dia"
-          tickFormatter={formatarDiaEixo}
-          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
-          axisLine={{ stroke: "var(--border)" }}
-          tickLine={false}
-        />
-        <YAxis
-          tickFormatter={(v) => formatadorEixo.format(v)}
-          tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
-          axisLine={false}
-          tickLine={false}
-          width={64}
-        />
-        <Tooltip
-          cursor={{ fill: "var(--muted)" }}
-          contentStyle={{
-            background: "var(--popover)",
-            color: "var(--popover-foreground)",
-            border: "1px solid var(--border)",
-            borderRadius: 8,
-            fontSize: 13,
-          }}
-          labelFormatter={(dia) => formatarDiaEixo(String(dia))}
-          formatter={(valor, nome) => [formatarDinheiro(Number(valor)), String(nome)]}
-        />
-        <Legend
-          formatter={(valor) => <span className="text-sm text-foreground">{valor}</span>}
-        />
-        <Bar
-          dataKey="entradas"
-          name="Entradas"
-          fill="var(--color-fin-entrada)"
-          radius={[4, 4, 0, 0]}
-          maxBarSize={20}
-        />
-        <Bar
-          dataKey="saidas"
-          name="Saídas"
-          fill="var(--color-fin-saida)"
-          radius={[4, 4, 0, 0]}
-          maxBarSize={20}
-        />
-      </BarChart>
-    </ResponsiveContainer>
-  );
+  return <Grafico dados={dados} />;
 }

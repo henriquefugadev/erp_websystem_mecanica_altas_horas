@@ -41,7 +41,12 @@ export function EditarOsDialog({
   queixaInicial,
   descricaoInicial,
   funcionarioIdInicial,
+  open: openControlado,
+  onOpenChange,
 }: {
+  // Ver ReceberPagamentoDialog: opcionais, para o card poder montar sob demanda.
+  open?: boolean;
+  onOpenChange?: (aberto: boolean) => void;
   ordemId: string;
   numero: number;
   funcionarios: FuncionarioOpcao[];
@@ -51,7 +56,9 @@ export function EditarOsDialog({
   funcionarioIdInicial: string | null;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [openInterno, setOpenInterno] = useState(false);
+  const open = openControlado ?? openInterno;
+  const setOpen = onOpenChange ?? setOpenInterno;
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 

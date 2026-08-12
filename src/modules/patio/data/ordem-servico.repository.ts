@@ -67,16 +67,23 @@ export async function listarOcupacaoGalpoes(
 // Quantos itens de diagnóstico (itens do rascunho de orçamento) cada OS já
 // tem — alimenta o badge "Diagnóstico: N itens" no card. Uma query só para o
 // quadro inteiro, agrupando por OS na aplicação.
+//
+// `ordemIds` são as OS visíveis no quadro. Sem esse filtro, a consulta trazia
+// TODOS os rascunhos da oficina em toda abertura do pátio — inclusive os das OS
+// antigas do histórico importado, que nunca aparecem na tela.
 export async function contarDiagnosticoPorOs(
-  supabase: Client
+  supabase: Client,
+  ordemIds: string[]
 ): Promise<Record<string, number>> {
   type Row = { ordem_servico_id: string | null; orcamento_item: { count: number }[] };
+
+  if (ordemIds.length === 0) return {};
 
   const { data, error } = await supabase
     .from("orcamento")
     .select("ordem_servico_id, orcamento_item(count)")
     .eq("status", "rascunho")
-    .not("ordem_servico_id", "is", null)
+    .in("ordem_servico_id", ordemIds)
     .is("deleted_at", null)
     .overrideTypes<Row[], { merge: false }>();
 
@@ -96,6 +103,7 @@ export async function contarDiagnosticoPorOs(
 // e serve de total no aviso "carro pronto". Uma query para o quadro inteiro.
 export async function valoresConclusaoPorOs(
   supabase: Client,
+  ordemIds: string[],
   parametros: ParametrosPatio = parametrosPatio(null)
 ): Promise<Record<string, ValoresConclusao>> {
   type Row = {
@@ -105,12 +113,17 @@ export async function valoresConclusaoPorOs(
     categoria_financeira: { nome: string } | null;
   };
 
+  // Mesma razão do contarDiagnosticoPorOs: sem o recorte pelas OS do quadro,
+  // isto lia TODA conta a receber em aberto da oficina — uma tabela que só
+  // cresce, e da qual o quadro usa um punhado de linhas.
+  if (ordemIds.length === 0) return {};
+
   const { data, error } = await supabase
     .from("conta_financeira")
     .select("ordem_servico_id, valor_total, categoria_id, categoria_financeira!inner(nome)")
     .eq("tipo", "receber")
     .in("status", ["aberta", "parcial"])
-    .not("ordem_servico_id", "is", null)
+    .in("ordem_servico_id", ordemIds)
     .is("deleted_at", null)
     .overrideTypes<Row[], { merge: false }>();
 
@@ -311,12 +324,7 @@ export async function buscarHistoricoDoCliente(
 }
 
 export async function marcarClienteAvisado(supabase: Client, id: string) {
-  const { error } = await supabase
-    .from("ordem_servico")
-    .update({ cliente_avisado_em: new Date().toISOString() })
-    .eq("id", id);
-
-  if (error) throw error;
+  await atualizarOs(supabase, id, { cliente_avisado_em: new Date().toISOString() });
 }
 
 export async function buscarOrdemPorId(supabase: Client, id: string) {
@@ -354,6 +362,30 @@ export async function criarOrdem(
   return data;
 }
 
+type CamposOrdem = Database["public"]["Tables"]["ordem_servico"]["Update"];
+
+/**
+ * Update numa OS que EXIGE ter mudado a linha.
+ *
+ * Um UPDATE que não casa nenhuma linha — RLS barrando, id de outra oficina, OS
+ * apagada no meio do caminho — afeta 0 linhas e **não devolve erro**. Sem o
+ * `.select().single()` abaixo, a action seguia para o `revalidatePath`, o quadro
+ * voltava igual e a Michele via "OS iniciada" com o card parado no lugar: o
+ * sintoma clássico de "o sistema travou".
+ *
+ * Com o single(), 0 linhas viram PGRST116, o erro sobe e ela lê o motivo.
+ */
+async function atualizarOs(supabase: Client, id: string, campos: CamposOrdem) {
+  const { error } = await supabase
+    .from("ordem_servico")
+    .update(campos)
+    .eq("id", id)
+    .select("id")
+    .single();
+
+  if (error) throw error;
+}
+
 // Edita os campos operacionais da OS (queixa, observações, técnico). Não mexe
 // em status/galpão nem em cliente/veículo — esses seguem seus próprios fluxos.
 export async function atualizarOrdem(
@@ -361,121 +393,82 @@ export async function atualizarOrdem(
   id: string,
   dados: { titulo: string; queixa: string; descricao: string; funcionarioId: string }
 ) {
-  const { error } = await supabase
-    .from("ordem_servico")
-    .update({
-      titulo: dados.titulo || null,
-      queixa: dados.queixa || null,
-      descricao: dados.descricao || null,
-      funcionario_id: dados.funcionarioId || null,
-    })
-    .eq("id", id);
-
-  if (error) throw error;
+  await atualizarOs(supabase, id, {
+    titulo: dados.titulo || null,
+    queixa: dados.queixa || null,
+    descricao: dados.descricao || null,
+    funcionario_id: dados.funcionarioId || null,
+  });
 }
 
 export async function iniciarOrdem(supabase: Client, id: string, galpao: Galpao) {
-  const { error } = await supabase
-    .from("ordem_servico")
-    // Limpa data_pausa: pode vir de "esperando confirmação", que carimba a pausa.
-    .update({
-      status: "em_execucao",
-      data_inicio: new Date().toISOString(),
-      galpao,
-      data_pausa: null,
-      motivo_parada: null,
-    })
-    .eq("id", id);
-
-  if (error) throw error;
+  // Limpa data_pausa: pode vir de "esperando confirmação", que carimba a pausa.
+  await atualizarOs(supabase, id, {
+    status: "em_execucao",
+    data_inicio: new Date().toISOString(),
+    galpao,
+    data_pausa: null,
+    motivo_parada: null,
+  });
 }
 
 // Coloca a OS na coluna "Esperando Confirmação do Cliente". Mantém o galpão e o
 // data_inicio (o carro segue na baia) e carimba data_pausa para medir a espera.
 export async function enviarParaConfirmacao(supabase: Client, id: string) {
-  const { error } = await supabase
-    .from("ordem_servico")
-    .update({ status: "aguardando_confirmacao", data_pausa: new Date().toISOString() })
-    .eq("id", id);
-
-  if (error) throw error;
+  await atualizarOs(supabase, id, {
+    status: "aguardando_confirmacao",
+    data_pausa: new Date().toISOString(),
+  });
 }
 
 // Desfaz o início por engano: volta como se não tivesse começado — libera o
 // galpão e limpa data_inicio, pra próxima vez que iniciar carimbar de novo.
 export async function voltarParaAguardando(supabase: Client, id: string) {
-  const { error } = await supabase
-    .from("ordem_servico")
-    .update({
-      status: "aguardando",
-      galpao: null,
-      data_inicio: null,
-      data_pausa: null,
-      motivo_parada: null,
-    })
-    .eq("id", id);
-
-  if (error) throw error;
+  await atualizarOs(supabase, id, {
+    status: "aguardando",
+    galpao: null,
+    data_inicio: null,
+    data_pausa: null,
+    motivo_parada: null,
+  });
 }
 
 export async function pausarOrdem(supabase: Client, id: string, motivo?: MotivoParada) {
-  const { error } = await supabase
-    .from("ordem_servico")
-    .update({
-      status: "parado",
-      data_pausa: new Date().toISOString(),
-      motivo_parada: motivo ?? null,
-    })
-    .eq("id", id);
-
-  if (error) throw error;
+  await atualizarOs(supabase, id, {
+    status: "parado",
+    data_pausa: new Date().toISOString(),
+    motivo_parada: motivo ?? null,
+  });
 }
 
 export async function retomarOrdem(supabase: Client, id: string) {
-  const { error } = await supabase
-    .from("ordem_servico")
-    .update({ status: "em_execucao", data_pausa: null, motivo_parada: null })
-    .eq("id", id);
-
-  if (error) throw error;
+  await atualizarOs(supabase, id, {
+    status: "em_execucao",
+    data_pausa: null,
+    motivo_parada: null,
+  });
 }
 
 export async function moverGalpao(supabase: Client, id: string, galpao: Galpao) {
-  const { error } = await supabase.from("ordem_servico").update({ galpao }).eq("id", id);
-  if (error) throw error;
+  await atualizarOs(supabase, id, { galpao });
 }
 
 export async function cancelarOrdem(supabase: Client, id: string) {
-  const { error } = await supabase
-    .from("ordem_servico")
-    .update({ status: "cancelada" })
-    .eq("id", id);
-
-  if (error) throw error;
+  await atualizarOs(supabase, id, { status: "cancelada" });
 }
 
 // Arquiva uma OS concluída: some do quadro imediatamente, sem esperar os N dias
 // da limpeza automática. Só ocultação — a OS segue no banco, no histórico e nos
 // relatórios (nada aqui mexe em deleted_at).
 export async function arquivarOrdem(supabase: Client, id: string) {
-  const { error } = await supabase
-    .from("ordem_servico")
-    .update({ arquivada_em: new Date().toISOString() })
-    .eq("id", id);
-
-  if (error) throw error;
+  await atualizarOs(supabase, id, { arquivada_em: new Date().toISOString() });
 }
 
 // Desfaz o arquivamento: a OS volta a aparecer no quadro. Existe porque
 // arquivar tira o card da tela na hora e, sem isto, um clique errado não teria
 // volta por nenhum caminho da interface.
 export async function desarquivarOrdem(supabase: Client, id: string) {
-  const { error } = await supabase
-    .from("ordem_servico")
-    .update({ arquivada_em: null })
-    .eq("id", id);
-
-  if (error) throw error;
+  await atualizarOs(supabase, id, { arquivada_em: null });
 }
 
 export async function concluirOrdem(

@@ -6,12 +6,23 @@ import { STATUS_ORCAMENTO_LABEL } from "@/modules/orcamento/domain/types";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { MostrarMais } from "@/components/ui/mostrar-mais";
 import { formatarData, formatarDinheiro, formatarPlaca } from "@/lib/format";
+import { limiteDaUrl, recortar } from "@/lib/paginacao";
 import { cn } from "@/lib/utils";
 
-export default async function OrcamentosPage() {
+export default async function OrcamentosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mostrar?: string }>;
+}) {
+  const { mostrar } = await searchParams;
+  const limite = limiteDaUrl(mostrar);
   const supabase = await createClient();
-  const orcamentos = await listarOrcamentos(supabase);
+  const { itens: orcamentos, temMais } = recortar(
+    await listarOrcamentos(supabase, limite + 1),
+    limite
+  );
 
   return (
     <div className="grid gap-6">
@@ -67,6 +78,14 @@ export default async function OrcamentosPage() {
           ))}
         </TableBody>
       </Table>
+
+      <MostrarMais
+        mostrando={orcamentos.length}
+        temMais={temMais}
+        limite={limite}
+        params={{}}
+        substantivo="orçamentos"
+      />
     </div>
   );
 }

@@ -52,12 +52,19 @@ const SELECT_DETALHE =
   "*, cliente(nome, telefone), veiculo(placa, modelo, marca, ano, cor, quilometragem), " +
   "orcamento_item(*), ordem_servico!orcamento_ordem_servico_id_fkey(numero, funcionario(nome))";
 
-export async function listarOrcamentos(supabase: Client) {
-  const { data, error } = await supabase
+// `limite` recorta a listagem — ver lib/paginacao.ts.
+export async function listarOrcamentos(supabase: Client, limite?: number) {
+  let query = supabase
     .from("vw_orcamento")
     .select(SELECT_LISTA)
-    .order("numero", { ascending: false })
-    .overrideTypes<OrcamentoComCliente[], { merge: false }>();
+    .order("numero", { ascending: false });
+
+  if (limite) query = query.limit(limite);
+
+  const { data, error } = await query.overrideTypes<
+    OrcamentoComCliente[],
+    { merge: false }
+  >();
 
   if (error) throw error;
   return data;

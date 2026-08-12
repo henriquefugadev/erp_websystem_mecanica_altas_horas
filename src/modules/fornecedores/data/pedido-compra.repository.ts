@@ -14,7 +14,12 @@ const SELECT_DETALHE =
   "*, fornecedor(nome), categoria_financeira(nome), ordem_servico(numero, queixa), " +
   "pedido_compra_item(*), recebimento_compra(*, conta_financeira(status))";
 
-export async function listarPedidos(supabase: Client, fornecedorId?: string) {
+// `limite` recorta a listagem — ver lib/paginacao.ts.
+export async function listarPedidos(
+  supabase: Client,
+  fornecedorId?: string,
+  limite?: number
+) {
   let query = supabase
     .from("pedido_compra")
     .select("*, fornecedor(nome), categoria_financeira(nome)")
@@ -22,6 +27,7 @@ export async function listarPedidos(supabase: Client, fornecedorId?: string) {
     .order("numero", { ascending: false });
 
   if (fornecedorId) query = query.eq("fornecedor_id", fornecedorId);
+  if (limite) query = query.limit(limite);
 
   const { data, error } = await query;
   if (error) throw error;

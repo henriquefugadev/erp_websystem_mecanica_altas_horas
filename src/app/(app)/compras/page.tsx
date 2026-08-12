@@ -6,12 +6,23 @@ import { STATUS_PEDIDO_LABEL } from "@/modules/fornecedores/domain/types";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { MostrarMais } from "@/components/ui/mostrar-mais";
 import { formatarData } from "@/lib/format";
+import { limiteDaUrl, recortar } from "@/lib/paginacao";
 import { cn } from "@/lib/utils";
 
-export default async function ComprasPage() {
+export default async function ComprasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mostrar?: string }>;
+}) {
+  const { mostrar } = await searchParams;
+  const limite = limiteDaUrl(mostrar);
   const supabase = await createClient();
-  const pedidos = await listarPedidos(supabase);
+  const { itens: pedidos, temMais } = recortar(
+    await listarPedidos(supabase, undefined, limite + 1),
+    limite
+  );
 
   return (
     <div className="grid gap-6">
@@ -63,6 +74,14 @@ export default async function ComprasPage() {
           ))}
         </TableBody>
       </Table>
+
+      <MostrarMais
+        mostrando={pedidos.length}
+        temMais={temMais}
+        limite={limite}
+        params={{}}
+        substantivo="pedidos"
+      />
     </div>
   );
 }

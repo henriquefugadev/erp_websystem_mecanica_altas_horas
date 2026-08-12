@@ -12,17 +12,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { MostrarMais } from "@/components/ui/mostrar-mais";
 import { formatarDocumento, formatarTelefone } from "@/lib/format";
+import { limiteDaUrl, recortar } from "@/lib/paginacao";
 import { cn } from "@/lib/utils";
 
 export default async function ClientesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ busca?: string }>;
+  searchParams: Promise<{ busca?: string; mostrar?: string }>;
 }) {
-  const { busca } = await searchParams;
+  const { busca, mostrar } = await searchParams;
+  const limite = limiteDaUrl(mostrar);
   const supabase = await createClient();
-  const clientes = await listarClientes(supabase, busca);
+  // Pede uma linha a mais do que vai mostrar, só para saber se há próxima.
+  const { itens: clientes, temMais } = recortar(
+    await listarClientes(supabase, busca, limite + 1),
+    limite
+  );
 
   return (
     <div className="grid gap-6">
@@ -85,6 +92,14 @@ export default async function ClientesPage({
           ))}
         </TableBody>
       </Table>
+
+      <MostrarMais
+        mostrando={clientes.length}
+        temMais={temMais}
+        limite={limite}
+        params={{ busca }}
+        substantivo="clientes"
+      />
     </div>
   );
 }

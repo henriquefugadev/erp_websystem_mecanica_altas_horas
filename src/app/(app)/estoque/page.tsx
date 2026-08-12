@@ -1,18 +1,31 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { listarPecas } from "@/modules/estoque/data/peca.repository";
+import { contarAbaixoDoMinimo, listarPecas } from "@/modules/estoque/data/peca.repository";
 import { nivelEstoque } from "@/modules/estoque/domain/estoque";
+import { MostrarMais } from "@/components/ui/mostrar-mais";
+import { limiteDaUrl, recortar } from "@/lib/paginacao";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatarDinheiro } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export default async function EstoquePage() {
+export default async function EstoquePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mostrar?: string }>;
+}) {
+  const { mostrar } = await searchParams;
+  const limite = limiteDaUrl(mostrar);
   const supabase = await createClient();
-  const pecas = await listarPecas(supabase);
-  const abaixoDoMinimo = pecas.filter((p) => nivelEstoque(p) !== "ok").length;
+
+  // O contador do alerta é da oficina inteira, não da página visível.
+  const [linhas, abaixoDoMinimo] = await Promise.all([
+    listarPecas(supabase, false, limite + 1),
+    contarAbaixoDoMinimo(supabase),
+  ]);
+  const { itens: pecas, temMais } = recortar(linhas, limite);
 
   return (
     <div className="grid gap-6">
@@ -92,6 +105,14 @@ export default async function EstoquePage() {
           })}
         </TableBody>
       </Table>
+
+      <MostrarMais
+        mostrando={pecas.length}
+        temMais={temMais}
+        limite={limite}
+        params={{}}
+        substantivo="peças"
+      />
     </div>
   );
 }
