@@ -23,6 +23,7 @@ import { criarClienteAction } from "@/modules/crm/application/cliente.actions";
 import { criarVeiculoAction } from "@/modules/crm/application/veiculo.actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Erro } from "@/components/ui/erro";
 
 const VEICULO_VAZIO_MODELO = "";
 
@@ -130,7 +131,7 @@ export function NovoClienteForm() {
         )}
       </Card>
 
-      {erro && <p className="text-sm text-destructive">{erro}</p>}
+      <Erro msg={erro} />
 
       <div className="flex gap-2">
         <Button

@@ -91,14 +91,14 @@ export function ContaFields({
               </Select>
             )}
           />
-          {errors.categoriaId && <Erro msg={errors.categoriaId.message} />}
+          <Erro msg={errors.categoriaId?.message} />
         </div>
       </div>
 
       <div className="grid gap-1.5">
         <Label htmlFor="descricao" required>Descrição</Label>
         <Input id="descricao" {...register("descricao")} />
-        {errors.descricao && <Erro msg={errors.descricao.message} />}
+        <Erro msg={errors.descricao?.message} />
       </div>
 
       {tipo === "receber" ? (
@@ -133,7 +133,7 @@ export function ContaFields({
         <div className="grid gap-1.5">
           <Label htmlFor="fornecedorNome">Fornecedor (opcional)</Label>
           <Input id="fornecedorNome" placeholder="Nome do fornecedor" {...register("fornecedorNome")} />
-          {errors.fornecedorNome && <Erro msg={errors.fornecedorNome.message} />}
+          <Erro msg={errors.fornecedorNome?.message} />
         </div>
       )}
 
@@ -146,12 +146,12 @@ export function ContaFields({
             inputMode="decimal"
             {...register("valorTotal")}
           />
-          {errors.valorTotal && <Erro msg={errors.valorTotal.message} />}
+          <Erro msg={errors.valorTotal?.message} />
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="dataEmissao" required>Data de emissão</Label>
           <Input id="dataEmissao" type="date" {...register("dataEmissao")} />
-          {errors.dataEmissao && <Erro msg={errors.dataEmissao.message} />}
+          <Erro msg={errors.dataEmissao?.message} />
         </div>
       </div>
 

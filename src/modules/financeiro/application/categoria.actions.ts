@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getSessaoAtual } from "@/lib/supabase/sessao";
 import { categoriaSchema, type CategoriaInput } from "@/lib/validators/financeiro.schema";
 import {
   atualizarCategoria,
@@ -10,15 +9,15 @@ import {
   softDeleteCategoria,
 } from "@/modules/financeiro/data/categoria.repository";
 import { mensagemDeErro } from "./erros";
-import type { ActionResult } from "@/lib/action-result";
+import { exigirSessao, type ActionResult } from "@/lib/action-result";
 
 export type { ActionResult };
 
 export async function criarCategoriaAction(
   entrada: unknown
 ): Promise<ActionResult<{ id: string }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = categoriaSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -27,7 +26,7 @@ export async function criarCategoriaAction(
 
   const supabase = await createClient();
   try {
-    const categoria = await criarCategoria(supabase, sessao.workshopId, parsed.data);
+    const categoria = await criarCategoria(supabase, guard.sessao.workshopId, parsed.data);
     revalidatePath("/financeiro/categorias");
     return { ok: true, data: { id: categoria.id } };
   } catch (e) {
@@ -39,8 +38,8 @@ export async function atualizarCategoriaAction(
   id: string,
   entrada: unknown
 ): Promise<ActionResult<{ id: string }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = categoriaSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -58,8 +57,8 @@ export async function atualizarCategoriaAction(
 }
 
 export async function excluirCategoriaAction(id: string): Promise<ActionResult<null>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const supabase = await createClient();
   try {

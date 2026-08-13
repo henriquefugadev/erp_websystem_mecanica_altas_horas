@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -28,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { FuncionarioOpcao } from "./nova-os-dialog";
+import { Erro } from "@/components/ui/erro";
 
 // Sem técnico é um valor válido (a OS pode não ter ninguém atribuído). O Select
 // não aceita "" como value de item, então uso este sentinela e converto na volta.
@@ -55,7 +55,6 @@ export function EditarOsDialog({
   descricaoInicial: string | null;
   funcionarioIdInicial: string | null;
 }) {
-  const router = useRouter();
   const [openInterno, setOpenInterno] = useState(false);
   const open = openControlado ?? openInterno;
   const setOpen = onOpenChange ?? setOpenInterno;
@@ -92,7 +91,6 @@ export function EditarOsDialog({
       }
       toast.success("OS atualizada.");
       setOpen(false);
-      router.refresh();
     } finally {
       setEnviando(false);
     }
@@ -129,9 +127,7 @@ export function EditarOsDialog({
               placeholder="Ex.: Revisão 20 mil, Retorno garantia"
               {...form.register("titulo")}
             />
-            {form.formState.errors.titulo && (
-              <p className="text-sm text-destructive">{form.formState.errors.titulo.message}</p>
-            )}
+            <Erro msg={form.formState.errors.titulo?.message} />
           </div>
 
           <div className="grid gap-1.5">
@@ -177,7 +173,7 @@ export function EditarOsDialog({
             </div>
           </div>
 
-          {erro && <p className="text-sm text-destructive">{erro}</p>}
+          <Erro msg={erro} />
 
           <DialogFooter>
             <Button

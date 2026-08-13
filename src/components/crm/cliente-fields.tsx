@@ -82,31 +82,31 @@ export function ClienteFields({
               </Select>
             )}
           />
-          {errors.tipo && <Erro msg={errors.tipo.message} />}
+          <Erro msg={errors.tipo?.message} />
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="documento">CPF/CNPJ</Label>
           <Input id="documento" {...register("documento")} />
-          {errors.documento && <Erro msg={errors.documento.message} />}
+          <Erro msg={errors.documento?.message} />
         </div>
       </div>
 
       <div className="grid gap-1.5">
         <Label htmlFor="nome" required>Nome / Razão social</Label>
         <Input id="nome" {...register("nome")} />
-        {errors.nome && <Erro msg={errors.nome.message} />}
+        <Erro msg={errors.nome?.message} />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="grid gap-1.5">
           <Label htmlFor="telefone" required>Telefone</Label>
           <Input id="telefone" {...register("telefone")} />
-          {errors.telefone && <Erro msg={errors.telefone.message} />}
+          <Erro msg={errors.telefone?.message} />
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="email">E-mail</Label>
           <Input id="email" type="email" {...register("email")} />
-          {errors.email && <Erro msg={errors.email.message} />}
+          <Erro msg={errors.email?.message} />
         </div>
       </div>
 
@@ -121,7 +121,7 @@ export function ClienteFields({
               preencherPorCep();
             }}
           />
-          {errors.cep && <Erro msg={errors.cep.message} />}
+          <Erro msg={errors.cep?.message} />
           {buscandoCep && (
             <p className="text-xs text-muted-foreground">Buscando endereço…</p>
           )}
@@ -129,7 +129,7 @@ export function ClienteFields({
         <div className="col-span-2 grid gap-1.5">
           <Label htmlFor="logradouro">Endereço</Label>
           <Input id="logradouro" {...register("logradouro")} />
-          {errors.logradouro && <Erro msg={errors.logradouro.message} />}
+          <Erro msg={errors.logradouro?.message} />
         </div>
       </div>
 
@@ -137,7 +137,7 @@ export function ClienteFields({
         <div className="grid gap-1.5">
           <Label htmlFor="numero">Número</Label>
           <Input id="numero" {...register("numero")} />
-          {errors.numero && <Erro msg={errors.numero.message} />}
+          <Erro msg={errors.numero?.message} />
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="complemento">Complemento</Label>
@@ -146,7 +146,7 @@ export function ClienteFields({
         <div className="grid gap-1.5">
           <Label htmlFor="bairro">Bairro</Label>
           <Input id="bairro" {...register("bairro")} />
-          {errors.bairro && <Erro msg={errors.bairro.message} />}
+          <Erro msg={errors.bairro?.message} />
         </div>
       </div>
 
@@ -154,12 +154,12 @@ export function ClienteFields({
         <div className="col-span-2 grid gap-1.5">
           <Label htmlFor="cidade">Cidade</Label>
           <Input id="cidade" {...register("cidade")} />
-          {errors.cidade && <Erro msg={errors.cidade.message} />}
+          <Erro msg={errors.cidade?.message} />
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="estado">UF</Label>
           <Input id="estado" maxLength={2} {...register("estado")} />
-          {errors.estado && <Erro msg={errors.estado.message} />}
+          <Erro msg={errors.estado?.message} />
         </div>
       </div>
 

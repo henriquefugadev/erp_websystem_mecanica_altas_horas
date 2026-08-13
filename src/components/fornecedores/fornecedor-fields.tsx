@@ -19,14 +19,14 @@ export function FornecedorFields({
       <div className="grid gap-1.5">
         <Label htmlFor="nome" required>Nome / Razão social</Label>
         <Input id="nome" {...register("nome")} />
-        {errors.nome && <Erro msg={errors.nome.message} />}
+        <Erro msg={errors.nome?.message} />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="grid gap-1.5">
           <Label htmlFor="documento">CPF/CNPJ (opcional)</Label>
           <Input id="documento" {...register("documento")} />
-          {errors.documento && <Erro msg={errors.documento.message} />}
+          <Erro msg={errors.documento?.message} />
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="contatoNome">Contato/vendedor (opcional)</Label>
@@ -38,12 +38,12 @@ export function FornecedorFields({
         <div className="grid gap-1.5">
           <Label htmlFor="telefone">Telefone (opcional)</Label>
           <Input id="telefone" {...register("telefone")} />
-          {errors.telefone && <Erro msg={errors.telefone.message} />}
+          <Erro msg={errors.telefone?.message} />
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="email">E-mail (opcional)</Label>
           <Input id="email" type="email" {...register("email")} />
-          {errors.email && <Erro msg={errors.email.message} />}
+          <Erro msg={errors.email?.message} />
         </div>
       </div>
 
@@ -55,7 +55,7 @@ export function FornecedorFields({
         <div className="grid gap-1.5">
           <Label htmlFor="prazoEntregaDias">Prazo de entrega, em dias (opcional)</Label>
           <Input id="prazoEntregaDias" type="number" min={1} {...register("prazoEntregaDias")} />
-          {errors.prazoEntregaDias && <Erro msg={errors.prazoEntregaDias.message} />}
+          <Erro msg={errors.prazoEntregaDias?.message} />
         </div>
       </div>
 

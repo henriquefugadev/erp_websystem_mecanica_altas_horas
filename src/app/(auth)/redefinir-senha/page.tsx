@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Erro } from "@/components/ui/erro";
 
 const schema = z
   .object({
@@ -51,18 +52,16 @@ export default function RedefinirSenhaPage() {
                 Nova senha
               </Label>
               <Input id="senha" type="password" {...register("senha")} />
-              {errors.senha && <p className="text-sm text-destructive">{errors.senha.message}</p>}
+              <Erro msg={errors.senha?.message} />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="confirmar" required>
                 Confirmar senha
               </Label>
               <Input id="confirmar" type="password" {...register("confirmar")} />
-              {errors.confirmar && (
-                <p className="text-sm text-destructive">{errors.confirmar.message}</p>
-              )}
+              <Erro msg={errors.confirmar?.message} />
             </div>
-            {erro && <p className="text-sm text-destructive">{erro}</p>}
+            <Erro msg={erro} />
             <Button type="submit" disabled={isSubmitting} className="mt-2">
               Salvar nova senha
             </Button>

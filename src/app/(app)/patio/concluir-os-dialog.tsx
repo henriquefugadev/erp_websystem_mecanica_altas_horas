@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -67,7 +66,6 @@ export function ConcluirOsDialog({
   categoriasReceita: { id: string; nome: string }[];
   parametros: ParametrosPatio;
 }) {
-  const router = useRouter();
   const [openInterno, setOpenInterno] = useState(false);
   const open = openControlado ?? openInterno;
   const setOpen = onOpenChange ?? setOpenInterno;
@@ -141,7 +139,6 @@ export function ConcluirOsDialog({
           : "OS concluída."
       );
       setOpen(false);
-      router.refresh();
     } finally {
       setEnviando(false);
     }
@@ -273,9 +270,7 @@ export function ConcluirOsDialog({
               Vencimento (dia em que o cliente vai pagar)
             </Label>
             <Input id="vencimento" type="date" {...form.register("vencimento")} />
-            {form.formState.errors.vencimento && (
-              <Erro msg={form.formState.errors.vencimento.message} />
-            )}
+            <Erro msg={form.formState.errors.vencimento?.message} />
           </div>
 
           {parametros.garantiaMeses > 0 && (
@@ -287,7 +282,7 @@ export function ConcluirOsDialog({
             </p>
           )}
 
-          {erro && <p className="text-sm text-destructive">{erro}</p>}
+          <Erro msg={erro} />
 
           <DialogFooter>
             <Button

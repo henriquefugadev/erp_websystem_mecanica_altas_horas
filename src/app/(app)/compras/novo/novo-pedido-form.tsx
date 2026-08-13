@@ -127,9 +127,7 @@ export function NovoPedidoForm({
                   </Select>
                 )}
               />
-              {form.formState.errors.fornecedorId && (
-                <Erro msg={form.formState.errors.fornecedorId.message} />
-              )}
+              <Erro msg={form.formState.errors.fornecedorId?.message} />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="categoriaId" required>Categoria (despesa)</Label>
@@ -153,9 +151,7 @@ export function NovoPedidoForm({
                   </Select>
                 )}
               />
-              {form.formState.errors.categoriaId && (
-                <Erro msg={form.formState.errors.categoriaId.message} />
-              )}
+              <Erro msg={form.formState.errors.categoriaId?.message} />
             </div>
           </div>
 
@@ -163,9 +159,7 @@ export function NovoPedidoForm({
             <div className="grid gap-1.5">
               <Label htmlFor="dataEmissao" required>Data de emissão</Label>
               <Input id="dataEmissao" type="date" {...form.register("dataEmissao")} />
-              {form.formState.errors.dataEmissao && (
-                <Erro msg={form.formState.errors.dataEmissao.message} />
-              )}
+              <Erro msg={form.formState.errors.dataEmissao?.message} />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="previsaoEntrega">Previsão de entrega (opcional)</Label>
@@ -259,7 +253,7 @@ export function NovoPedidoForm({
         </CardContent>
       </Card>
 
-      {erro && <p className="text-sm text-destructive">{erro}</p>}
+      <Erro msg={erro} />
 
       <div className="flex gap-2">
         <Button

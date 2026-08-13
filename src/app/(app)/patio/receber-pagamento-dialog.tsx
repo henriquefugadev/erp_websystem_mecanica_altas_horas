@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -34,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Erro } from "@/components/ui/erro";
 
 type FormValues = z.input<typeof receberPagamentoSchema>;
 type FormOutput = z.output<typeof receberPagamentoSchema>;
@@ -55,7 +55,6 @@ export function ReceberPagamentoDialog({
   open?: boolean;
   onOpenChange?: (aberto: boolean) => void;
 }) {
-  const router = useRouter();
   const [openInterno, setOpenInterno] = useState(false);
   const open = openControlado ?? openInterno;
   const setOpen = onOpenChange ?? setOpenInterno;
@@ -94,7 +93,6 @@ export function ReceberPagamentoDialog({
       }
       toast.success(`Pagamento recebido — ${formatarDinheiro(totalDevido)} baixado(s) no Financeiro.`);
       setOpen(false);
-      router.refresh();
     } finally {
       setEnviando(false);
     }
@@ -161,11 +159,7 @@ export function ReceberPagamentoDialog({
                   Data
                 </Label>
                 <Input id="dataPagamento" type="date" {...form.register("dataPagamento")} />
-                {form.formState.errors.dataPagamento && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.dataPagamento.message}
-                  </p>
-                )}
+                <Erro msg={form.formState.errors.dataPagamento?.message} />
               </div>
             </div>
 
@@ -174,7 +168,7 @@ export function ReceberPagamentoDialog({
               <Textarea id="observacoes" rows={2} {...form.register("observacoes")} />
             </div>
 
-            {erro && <p className="text-sm text-destructive">{erro}</p>}
+            <Erro msg={erro} />
 
             <DialogFooter>
               <Button

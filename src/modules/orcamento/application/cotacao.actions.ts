@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getSessaoAtual } from "@/lib/supabase/sessao";
 import { cotacoesSchema } from "@/lib/validators/cotacao.schema";
 import {
   listarItensCotadosDoOrcamento,
@@ -11,7 +10,7 @@ import {
 import { buscarConfiguracao } from "@/modules/workshop/data/workshop.repository";
 import { aplicarMarkup } from "@/modules/orcamento/domain/calculo";
 import { mensagemDeErro } from "@/modules/financeiro/application/erros";
-import type { ActionResult } from "@/lib/action-result";
+import { exigirSessao, type ActionResult } from "@/lib/action-result";
 
 export type { ActionResult };
 
@@ -19,8 +18,8 @@ export type { ActionResult };
 // (servidor) com o markup da oficina — o cliente nunca manda o preço, só o
 // custo, para não dar pra burlar a margem.
 export async function salvarCotacoesAction(entrada: unknown): Promise<ActionResult<null>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = cotacoesSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -30,7 +29,7 @@ export async function salvarCotacoesAction(entrada: unknown): Promise<ActionResu
 
   const supabase = await createClient();
   try {
-    const workshop = await buscarConfiguracao(supabase, sessao.workshopId);
+    const workshop = await buscarConfiguracao(supabase, guard.sessao.workshopId);
     const markup = workshop.markup_peca_percentual;
 
     const itens = parsed.data.itens.map((i) => ({
@@ -55,13 +54,13 @@ export async function salvarCotacoesAction(entrada: unknown): Promise<ActionResu
 export async function reaplicarMarkupAction(
   orcamentoId: string
 ): Promise<ActionResult<{ atualizados: number }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const supabase = await createClient();
   try {
     const [workshop, itens] = await Promise.all([
-      buscarConfiguracao(supabase, sessao.workshopId),
+      buscarConfiguracao(supabase, guard.sessao.workshopId),
       listarItensCotadosDoOrcamento(supabase, orcamentoId),
     ]);
     if (itens.length === 0) return { ok: true, data: { atualizados: 0 } };

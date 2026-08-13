@@ -14,6 +14,7 @@ import { FornecedorFields } from "@/components/fornecedores/fornecedor-fields";
 import { atualizarFornecedorAction } from "@/modules/fornecedores/application/fornecedor.actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Erro } from "@/components/ui/erro";
 
 export function EditarFornecedorForm({
   fornecedorId,
@@ -49,7 +50,7 @@ export function EditarFornecedorForm({
         </CardContent>
       </Card>
 
-      {erro && <p className="text-sm text-destructive">{erro}</p>}
+      <Erro msg={erro} />
 
       <div className="flex gap-2">
         <Button

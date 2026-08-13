@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getSessaoAtual } from "@/lib/supabase/sessao";
 import { veiculoSchema } from "@/lib/validators/veiculo.schema";
 import {
   atualizarVeiculo,
@@ -10,13 +9,14 @@ import {
   softDeleteVeiculo,
 } from "@/modules/crm/data/veiculo.repository";
 import type { ActionResult } from "./cliente.actions";
+import { exigirSessao } from "@/lib/action-result";
 
 export async function criarVeiculoAction(
   clienteId: string,
   entrada: unknown
 ): Promise<ActionResult<{ id: string }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = veiculoSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -27,7 +27,7 @@ export async function criarVeiculoAction(
   try {
     const veiculo = await criarVeiculo(
       supabase,
-      sessao.workshopId,
+      guard.sessao.workshopId,
       clienteId,
       parsed.data
     );
@@ -43,8 +43,8 @@ export async function atualizarVeiculoAction(
   clienteId: string,
   entrada: unknown
 ): Promise<ActionResult<{ id: string }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = veiculoSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -65,8 +65,8 @@ export async function excluirVeiculoAction(
   id: string,
   clienteId: string
 ): Promise<ActionResult<null>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const supabase = await createClient();
   try {

@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Erro } from "@/components/ui/erro";
 
 export function CategoriaFormDialog({
   categoria,
@@ -133,12 +134,10 @@ export function CategoriaFormDialog({
           <div className="grid gap-1.5">
             <Label htmlFor="nome" required>Nome</Label>
             <Input id="nome" {...form.register("nome")} />
-            {form.formState.errors.nome && (
-              <p className="text-sm text-destructive">{form.formState.errors.nome.message}</p>
-            )}
+            <Erro msg={form.formState.errors.nome?.message} />
           </div>
 
-          {erro && <p className="text-sm text-destructive">{erro}</p>}
+          <Erro msg={erro} />
 
           <DialogFooter>
             <Button

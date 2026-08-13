@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getSessaoAtual } from "@/lib/supabase/sessao";
 import { fornecedorSchema, type FornecedorInput } from "@/lib/validators/fornecedor.schema";
 import {
   atualizarFornecedor,
@@ -10,15 +9,15 @@ import {
   softDeleteFornecedor,
 } from "@/modules/fornecedores/data/fornecedor.repository";
 import { mensagemDeErro } from "@/modules/financeiro/application/erros";
-import type { ActionResult } from "@/lib/action-result";
+import { exigirSessao, type ActionResult } from "@/lib/action-result";
 
 export type { ActionResult };
 
 export async function criarFornecedorAction(
   entrada: unknown
 ): Promise<ActionResult<{ id: string }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = fornecedorSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -29,8 +28,8 @@ export async function criarFornecedorAction(
   try {
     const fornecedor = await criarFornecedor(
       supabase,
-      sessao.workshopId,
-      sessao.usuarioId,
+      guard.sessao.workshopId,
+      guard.sessao.usuarioId,
       parsed.data
     );
     revalidatePath("/fornecedores");
@@ -44,8 +43,8 @@ export async function atualizarFornecedorAction(
   id: string,
   entrada: unknown
 ): Promise<ActionResult<{ id: string }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = fornecedorSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -64,8 +63,8 @@ export async function atualizarFornecedorAction(
 }
 
 export async function excluirFornecedorAction(id: string): Promise<ActionResult<null>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const supabase = await createClient();
   try {

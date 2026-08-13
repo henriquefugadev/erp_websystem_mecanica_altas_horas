@@ -20,7 +20,7 @@ export function PecaFields({
       <div className="grid gap-1.5">
         <Label htmlFor="nome" required>Nome</Label>
         <Input id="nome" {...register("nome")} />
-        {errors.nome && <Erro msg={errors.nome.message} />}
+        <Erro msg={errors.nome?.message} />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -36,7 +36,7 @@ export function PecaFields({
               <option key={u} value={u} />
             ))}
           </datalist>
-          {errors.unidade && <Erro msg={errors.unidade.message} />}
+          <Erro msg={errors.unidade?.message} />
         </div>
       </div>
 
@@ -55,12 +55,12 @@ export function PecaFields({
         <div className="grid gap-1.5">
           <Label htmlFor="precoVenda">Preço de venda (R$)</Label>
           <Input id="precoVenda" type="text" inputMode="decimal" {...register("precoVenda")} />
-          {errors.precoVenda && <Erro msg={errors.precoVenda.message} />}
+          <Erro msg={errors.precoVenda?.message} />
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="estoqueMinimo">Estoque mínimo (opcional)</Label>
           <Input id="estoqueMinimo" type="text" inputMode="decimal" {...register("estoqueMinimo")} />
-          {errors.estoqueMinimo && <Erro msg={errors.estoqueMinimo.message} />}
+          <Erro msg={errors.estoqueMinimo?.message} />
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="localizacao">Localização (opcional)</Label>

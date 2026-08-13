@@ -16,6 +16,7 @@ import { ParcelasEditor } from "@/components/financeiro/parcelas-editor";
 import { criarContaAction } from "@/modules/financeiro/application/conta.actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Erro } from "@/components/ui/erro";
 
 interface Opcao {
   id: string;
@@ -90,7 +91,7 @@ export function NovaContaForm({
         </CardContent>
       </Card>
 
-      {erro && <p className="text-sm text-destructive">{erro}</p>}
+      <Erro msg={erro} />
 
       <div className="flex gap-2">
         <Button

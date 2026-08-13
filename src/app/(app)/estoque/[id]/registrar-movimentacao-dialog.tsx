@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Erro } from "@/components/ui/erro";
 
 type TipoManual = "entrada" | "devolucao" | "perda";
 
@@ -127,7 +128,7 @@ export function RegistrarMovimentacaoDialog({
             />
           </div>
 
-          {erro && <p className="text-sm text-destructive">{erro}</p>}
+          <Erro msg={erro} />
         </div>
 
         <DialogFooter>

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Erro } from "@/components/ui/erro";
 
 const schema = z.object({
   email: z.string().trim().email("E-mail inválido"),
@@ -63,11 +64,9 @@ export default function EsqueciSenhaPage() {
                   E-mail
                 </Label>
                 <Input id="email" type="email" {...register("email")} />
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email.message}</p>
-                )}
+                <Erro msg={errors.email?.message} />
               </div>
-              {erro && <p className="text-sm text-destructive">{erro}</p>}
+              <Erro msg={erro} />
               <Button type="submit" disabled={isSubmitting} className="mt-2">
                 Enviar link
               </Button>

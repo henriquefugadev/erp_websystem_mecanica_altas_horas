@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Erro } from "@/components/ui/erro";
 
 export function FuncionarioFormDialog({ funcionario }: { funcionario?: Funcionario }) {
   const router = useRouter();
@@ -115,9 +116,7 @@ export function FuncionarioFormDialog({ funcionario }: { funcionario?: Funcionar
           <div className="grid gap-1.5">
             <Label htmlFor="nome" required>Nome</Label>
             <Input id="nome" {...form.register("nome")} />
-            {form.formState.errors.nome && (
-              <p className="text-sm text-destructive">{form.formState.errors.nome.message}</p>
-            )}
+            <Erro msg={form.formState.errors.nome?.message} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -152,16 +151,12 @@ export function FuncionarioFormDialog({ funcionario }: { funcionario?: Funcionar
             <div className="grid gap-1.5">
               <Label htmlFor="telefone">Telefone (opcional)</Label>
               <Input id="telefone" {...form.register("telefone")} />
-              {form.formState.errors.telefone && (
-                <p className="text-sm text-destructive">{form.formState.errors.telefone.message}</p>
-              )}
+              <Erro msg={form.formState.errors.telefone?.message} />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="email">E-mail (opcional)</Label>
               <Input id="email" {...form.register("email")} />
-              {form.formState.errors.email && (
-                <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
-              )}
+              <Erro msg={form.formState.errors.email?.message} />
             </div>
           </div>
 
@@ -170,7 +165,7 @@ export function FuncionarioFormDialog({ funcionario }: { funcionario?: Funcionar
             <Textarea id="observacoes" rows={2} {...form.register("observacoes")} />
           </div>
 
-          {erro && <p className="text-sm text-destructive">{erro}</p>}
+          <Erro msg={erro} />
 
           <DialogFooter>
             <Button

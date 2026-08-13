@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getSessaoAtual } from "@/lib/supabase/sessao";
 import { enviarFoto, removerFoto } from "@/modules/crm/data/foto.repository";
 import type { ActionResult } from "./cliente.actions";
+import { exigirSessao } from "@/lib/action-result";
 
 const TIPOS_ACEITOS = ["image/jpeg", "image/png", "image/webp"];
 const TAMANHO_MAXIMO = 8 * 1024 * 1024; // 8MB
@@ -14,8 +14,8 @@ export async function enviarFotoAction(
   veiculoId: string,
   formData: FormData
 ): Promise<ActionResult<{ path: string }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const arquivo = formData.get("arquivo");
   if (!(arquivo instanceof File) || arquivo.size === 0) {
@@ -32,7 +32,7 @@ export async function enviarFotoAction(
   try {
     const path = await enviarFoto(
       supabase,
-      sessao.workshopId,
+      guard.sessao.workshopId,
       veiculoId,
       arquivo
     );
@@ -47,8 +47,8 @@ export async function removerFotoAction(
   clienteId: string,
   path: string
 ): Promise<ActionResult<null>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const supabase = await createClient();
   try {

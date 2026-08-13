@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -50,7 +49,6 @@ export function NovaOsDialog({
 }: {
   funcionarios: FuncionarioOpcao[];
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -76,7 +74,6 @@ export function NovaOsDialog({
       toast.success("OS aberta — já está em Aguardando.");
       setOpen(false);
       form.reset(DEFAULT_VALUES);
-      router.refresh();
     } finally {
       setEnviando(false);
     }
@@ -123,9 +120,7 @@ export function NovaOsDialog({
                 />
               )}
             />
-            {form.formState.errors.clienteId && (
-              <Erro msg={form.formState.errors.clienteId.message} />
-            )}
+            <Erro msg={form.formState.errors.clienteId?.message} />
           </div>
 
           <div className="grid gap-1.5">
@@ -157,15 +152,13 @@ export function NovaOsDialog({
                 </Select>
               )}
             />
-            {form.formState.errors.veiculoId && (
-              <Erro msg={form.formState.errors.veiculoId.message} />
-            )}
+            <Erro msg={form.formState.errors.veiculoId?.message} />
           </div>
 
           <div className="grid gap-1.5">
             <Label htmlFor="queixa">Queixa do cliente (opcional)</Label>
             <Textarea id="queixa" rows={2} {...form.register("queixa")} />
-            {form.formState.errors.queixa && <Erro msg={form.formState.errors.queixa.message} />}
+            <Erro msg={form.formState.errors.queixa?.message} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -198,7 +191,7 @@ export function NovaOsDialog({
             </div>
           </div>
 
-          {erro && <p className="text-sm text-destructive">{erro}</p>}
+          <Erro msg={erro} />
 
           <DialogFooter>
             <Button

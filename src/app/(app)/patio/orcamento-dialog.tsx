@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
-import { useRouter } from "next/navigation";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -42,6 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { PecaOpcao } from "./usar-peca-dialog";
+import { Erro } from "@/components/ui/erro";
 
 type FormValues = z.input<typeof diagnosticoSchema>;
 type FormOutput = z.output<typeof diagnosticoSchema>;
@@ -96,7 +96,6 @@ export function OrcamentoDialog({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
-  const router = useRouter();
   // Id do datalist é por OS: vários cards podem ter o dialog na árvore, e id
   // repetido faria todos os campos apontarem para o primeiro datalist do DOM.
   const datalistId = `orcamento-catalogo-${ordemId}`;
@@ -327,7 +326,6 @@ export function OrcamentoDialog({
       } else {
         toast.success("Orçamento salvo. Baixe o PDF para enviar ao cliente.");
       }
-      router.refresh();
     } finally {
       setEnviando(false);
     }
@@ -527,11 +525,14 @@ export function OrcamentoDialog({
             </p>
           </div>
 
+          {/* `errors.itens` é um erro de array: `.message` só é string quando o
+              erro é da lista inteira (ex.: "inclua ao menos um item"); nos erros
+              por linha vem undefined, e aí não há o que mostrar aqui. */}
           {typeof form.formState.errors.itens?.message === "string" && (
-            <p className="text-sm text-destructive">{form.formState.errors.itens.message}</p>
+            <Erro msg={form.formState.errors.itens.message} />
           )}
 
-          {erro && <p className="text-sm text-destructive">{erro}</p>}
+          <Erro msg={erro} />
 
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between">
             {podeBaixarPdf ? (

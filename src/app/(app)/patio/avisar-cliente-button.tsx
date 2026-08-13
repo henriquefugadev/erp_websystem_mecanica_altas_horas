@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { BellRing, Check } from "lucide-react";
 import { avisarClienteAction } from "@/modules/patio/application/ordem-servico.actions";
@@ -25,7 +24,6 @@ export function AvisarClienteButton({
   condicoes: string | null;
   jaAvisado: boolean;
 }) {
-  const router = useRouter();
   const [processando, setProcessando] = useState(false);
 
   async function registrar() {
@@ -37,7 +35,6 @@ export function AvisarClienteButton({
       return;
     }
     toast.success("Cliente avisado.");
-    router.refresh();
   }
 
   if (jaAvisado) {

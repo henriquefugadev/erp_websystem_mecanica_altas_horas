@@ -93,9 +93,7 @@ export function RegistrarPagamentoDialog({
             <div className="grid gap-1.5">
               <Label htmlFor="valor" required>Valor pago (R$)</Label>
               <Input id="valor" type="text" inputMode="decimal" {...form.register("valor")} />
-              {form.formState.errors.valor && (
-                <Erro msg={form.formState.errors.valor.message} />
-              )}
+              <Erro msg={form.formState.errors.valor?.message} />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="desconto">Desconto (R$)</Label>
@@ -105,9 +103,7 @@ export function RegistrarPagamentoDialog({
                 inputMode="decimal"
                 {...form.register("desconto")}
               />
-              {form.formState.errors.desconto && (
-                <Erro msg={form.formState.errors.desconto.message} />
-              )}
+              <Erro msg={form.formState.errors.desconto?.message} />
             </div>
           </div>
 
@@ -115,9 +111,7 @@ export function RegistrarPagamentoDialog({
             <div className="grid gap-1.5">
               <Label htmlFor="dataPagamento" required>Data do pagamento</Label>
               <Input id="dataPagamento" type="date" {...form.register("dataPagamento")} />
-              {form.formState.errors.dataPagamento && (
-                <Erro msg={form.formState.errors.dataPagamento.message} />
-              )}
+              <Erro msg={form.formState.errors.dataPagamento?.message} />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="formaPagamento">Forma de pagamento</Label>
@@ -154,7 +148,7 @@ export function RegistrarPagamentoDialog({
             {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(saldo)}
           </p>
 
-          {erro && <p className="text-sm text-destructive">{erro}</p>}
+          <Erro msg={erro} />
 
           <DialogFooter>
             <Button

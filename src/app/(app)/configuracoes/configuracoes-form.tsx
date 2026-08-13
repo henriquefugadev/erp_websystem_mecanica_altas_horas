@@ -241,7 +241,7 @@ export function ConfiguracoesForm({
                 Nome fantasia
               </Label>
               <Input id="nome" {...form.register("nome")} />
-              {errors.nome && <Erro msg={errors.nome.message} />}
+              <Erro msg={errors.nome?.message} />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="razaoSocial">Razão social</Label>
@@ -251,18 +251,18 @@ export function ConfiguracoesForm({
               <div className="grid gap-1.5">
                 <Label htmlFor="cnpj">CNPJ</Label>
                 <Input id="cnpj" {...form.register("cnpj")} />
-                {errors.cnpj && <Erro msg={errors.cnpj.message} />}
+                <Erro msg={errors.cnpj?.message} />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="telefone">Telefone</Label>
                 <Input id="telefone" {...form.register("telefone")} />
-                {errors.telefone && <Erro msg={errors.telefone.message} />}
+                <Erro msg={errors.telefone?.message} />
               </div>
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="email">E-mail</Label>
               <Input id="email" type="email" {...form.register("email")} />
-              {errors.email && <Erro msg={errors.email.message} />}
+              <Erro msg={errors.email?.message} />
             </div>
           </CardContent>
         </Card>
@@ -283,7 +283,7 @@ export function ConfiguracoesForm({
                     preencherPorCep();
                   }}
                 />
-                {errors.cep && <Erro msg={errors.cep.message} />}
+                <Erro msg={errors.cep?.message} />
                 {buscandoCep && (
                   <p className="text-xs text-muted-foreground">Buscando endereço…</p>
                 )}
@@ -315,7 +315,7 @@ export function ConfiguracoesForm({
               <div className="grid gap-1.5">
                 <Label htmlFor="estado">UF</Label>
                 <Input id="estado" maxLength={2} {...form.register("estado")} />
-                {errors.estado && <Erro msg={errors.estado.message} />}
+                <Erro msg={errors.estado?.message} />
               </div>
             </div>
           </CardContent>
@@ -345,9 +345,7 @@ export function ConfiguracoesForm({
                 min={1}
                 {...form.register("validadeOrcamentoDias")}
               />
-              {errors.validadeOrcamentoDias && (
-                <Erro msg={errors.validadeOrcamentoDias.message} />
-              )}
+              <Erro msg={errors.validadeOrcamentoDias?.message} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-1.5">
@@ -399,9 +397,7 @@ export function ConfiguracoesForm({
                 <p className="text-xs text-muted-foreground">
                   Aplicado sobre o custo cotado para sugerir o preço de venda.
                 </p>
-                {errors.markupPecaPercentual && (
-                  <Erro msg={errors.markupPecaPercentual.message} />
-                )}
+                <Erro msg={errors.markupPecaPercentual?.message} />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="valorHoraMaoObra">Valor da hora de mão de obra (R$)</Label>
@@ -412,7 +408,7 @@ export function ConfiguracoesForm({
                   step="0.01"
                   {...form.register("valorHoraMaoObra")}
                 />
-                {errors.valorHoraMaoObra && <Erro msg={errors.valorHoraMaoObra.message} />}
+                <Erro msg={errors.valorHoraMaoObra?.message} />
               </div>
             </div>
           </CardContent>
@@ -635,7 +631,7 @@ export function ConfiguracoesForm({
           </CardContent>
         </Card>
 
-        {erro && <p className="text-sm text-destructive">{erro}</p>}
+        <Erro msg={erro} />
 
         <div>
           <Button

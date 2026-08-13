@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getSessaoAtual } from "@/lib/supabase/sessao";
 import {
   clienteSchema,
   clienteRapidoSchema,
@@ -82,14 +81,19 @@ export async function buscarClientesComVeiculosAction(
 
 // Cadastro relâmpago da recepção: cria cliente (só nome+telefone) e o veículo
 // (placa+modelo) numa tacada e já devolve no formato do combobox, pronto para
-// selecionar. Se o veículo falhar (ex.: placa duplicada), o erro é reportado —
-// o cliente pode ter sido criado e fica disponível para reuso na busca.
+// selecionar.
+//
+// São dois INSERTs, não uma transação. Se o segundo falhar — o caso real é
+// placa já cadastrada — o cliente recém-criado é desfeito aqui mesmo. Sem isso
+// sobrava um cliente sem veículo nenhum na base, geralmente duplicata de um que
+// já existia (a placa repetida é justamente o sinal de que o carro, e portanto
+// o dono, já estão cadastrados).
 export async function criarClienteComVeiculoAction(
   clienteEntrada: unknown,
   veiculoEntrada: unknown
 ): Promise<ActionResult<ClienteOpcaoBusca>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const clienteParsed = clienteRapidoSchema.safeParse(clienteEntrada);
   if (!clienteParsed.success) {
@@ -104,16 +108,27 @@ export async function criarClienteComVeiculoAction(
   try {
     const cliente = await criarClienteRapido(
       supabase,
-      sessao.workshopId,
-      sessao.usuarioId,
+      guard.sessao.workshopId,
+      guard.sessao.usuarioId,
       clienteParsed.data
     );
-    const veiculo = await criarVeiculo(
-      supabase,
-      sessao.workshopId,
-      cliente.id,
-      veiculoParsed.data
-    );
+
+    let veiculo;
+    try {
+      veiculo = await criarVeiculo(
+        supabase,
+        guard.sessao.workshopId,
+        cliente.id,
+        veiculoParsed.data
+      );
+    } catch (e) {
+      // Desfaz o cliente para não deixar cadastro pela metade. Se o desfazer
+      // também falhar, seguimos reportando o erro original — é o que a pessoa
+      // precisa saber; um cliente órfão é problema menor e some da lista se o
+      // soft delete tiver passado.
+      await softDeleteCliente(supabase, cliente.id).catch(() => {});
+      throw e;
+    }
 
     revalidatePath("/clientes");
     revalidatePath("/patio");
@@ -140,8 +155,8 @@ export async function criarClienteComVeiculoAction(
 export async function criarClienteAction(
   entrada: unknown
 ): Promise<ActionResult<{ id: string }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = clienteSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -152,8 +167,8 @@ export async function criarClienteAction(
   try {
     const cliente = await criarCliente(
       supabase,
-      sessao.workshopId,
-      sessao.usuarioId,
+      guard.sessao.workshopId,
+      guard.sessao.usuarioId,
       parsed.data
     );
     revalidatePath("/clientes");
@@ -167,8 +182,8 @@ export async function atualizarClienteAction(
   id: string,
   entrada: unknown
 ): Promise<ActionResult<{ id: string }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = clienteSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -189,8 +204,8 @@ export async function atualizarClienteAction(
 export async function excluirClienteAction(
   id: string
 ): Promise<ActionResult<null>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const supabase = await createClient();
   try {
@@ -207,7 +222,9 @@ function mensagemDeErro(e: unknown): string {
     const detalhe =
       "message" in e && typeof e.message === "string" ? e.message.toLowerCase() : "";
     if (detalhe.includes("placa")) {
-      return "Já existe um veículo com essa placa nesta oficina.";
+      // Placa repetida quase sempre quer dizer "esse carro já está cadastrado",
+      // e o caminho é achar o dono, não insistir no cadastro novo.
+      return "Já existe um veículo com essa placa. Busque pela placa para achar o cliente.";
     }
     return "Já existe um cliente com esse documento nesta oficina.";
   }

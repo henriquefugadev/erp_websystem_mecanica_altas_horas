@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getSessaoAtual } from "@/lib/supabase/sessao";
 import {
   pedidoCompraSchema,
   recebimentoSchema,
@@ -21,15 +20,15 @@ import {
 import { podeCancelar, podeReceber } from "@/modules/fornecedores/domain/pedido";
 import { STATUS_PEDIDO_LABEL } from "@/modules/fornecedores/domain/types";
 import { mensagemDeErro } from "@/modules/financeiro/application/erros";
-import type { ActionResult } from "@/lib/action-result";
+import { exigirSessao, type ActionResult } from "@/lib/action-result";
 
 export type { ActionResult };
 
 export async function criarPedidoAction(
   entrada: unknown
 ): Promise<ActionResult<{ id: string }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = pedidoCompraSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -38,7 +37,7 @@ export async function criarPedidoAction(
 
   const supabase = await createClient();
   try {
-    const id = await criarPedido(supabase, sessao.workshopId, sessao.usuarioId, parsed.data);
+    const id = await criarPedido(supabase, guard.sessao.workshopId, guard.sessao.usuarioId, parsed.data);
     revalidatePath("/compras");
     return { ok: true, data: { id } };
   } catch (e) {
@@ -50,8 +49,8 @@ export async function receberPedidoAction(
   id: string,
   entrada: unknown
 ): Promise<ActionResult<{ recebimentoId: string; osLiberada: number | null }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = recebimentoSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -76,7 +75,7 @@ export async function receberPedidoAction(
     const esperavaPeca =
       osAntes?.status === "parado" && osAntes.motivoParada === "aguardando_peca";
 
-    const recebimentoId = await receberPedido(supabase, id, sessao.usuarioId, parsed.data);
+    const recebimentoId = await receberPedido(supabase, id, guard.sessao.usuarioId, parsed.data);
 
     // Confirma se o recebimento de fato liberou a OS (só quando veio completo).
     let osLiberada: number | null = null;
@@ -107,8 +106,8 @@ export async function gerarPedidosDoOrcamentoAction(
   orcamentoId: string,
   categoriaId: string
 ): Promise<ActionResult<{ quantidade: number }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
   if (!categoriaId) return { ok: false, erro: "Selecione a categoria de despesa." };
 
   const supabase = await createClient();
@@ -128,7 +127,7 @@ export async function gerarPedidosDoOrcamentoAction(
       supabase,
       orcamentoId,
       categoriaId,
-      sessao.usuarioId
+      guard.sessao.usuarioId
     );
     revalidatePath("/compras");
     revalidatePath(`/orcamentos/${orcamentoId}`);
@@ -140,8 +139,8 @@ export async function gerarPedidosDoOrcamentoAction(
 }
 
 export async function cancelarPedidoAction(id: string): Promise<ActionResult<null>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const supabase = await createClient();
   try {

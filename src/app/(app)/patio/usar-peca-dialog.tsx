@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -56,7 +55,6 @@ export function UsarPecaDialog({
   open?: boolean;
   onOpenChange?: (aberto: boolean) => void;
 }) {
-  const router = useRouter();
   const [openInterno, setOpenInterno] = useState(false);
   const open = openControlado ?? openInterno;
   const setOpen = onOpenChange ?? setOpenInterno;
@@ -79,7 +77,6 @@ export function UsarPecaDialog({
       }
       toast.success("Baixa de estoque registrada.");
       setOpen(false);
-      router.refresh();
     } finally {
       setEnviando(false);
     }
@@ -134,18 +131,16 @@ export function UsarPecaDialog({
                 </Select>
               )}
             />
-            {form.formState.errors.pecaId && <Erro msg={form.formState.errors.pecaId.message} />}
+            <Erro msg={form.formState.errors.pecaId?.message} />
           </div>
 
           <div className="grid gap-1.5">
             <Label htmlFor="quantidade" required>Quantidade</Label>
             <Input id="quantidade" type="text" inputMode="decimal" {...form.register("quantidade")} />
-            {form.formState.errors.quantidade && (
-              <Erro msg={form.formState.errors.quantidade.message} />
-            )}
+            <Erro msg={form.formState.errors.quantidade?.message} />
           </div>
 
-          {erro && <p className="text-sm text-destructive">{erro}</p>}
+          <Erro msg={erro} />
 
           <DialogFooter>
             <Button

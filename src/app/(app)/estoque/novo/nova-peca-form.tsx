@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Erro } from "@/components/ui/erro";
 
 export function NovaPecaForm() {
   const router = useRouter();
@@ -78,7 +79,7 @@ export function NovaPecaForm() {
         </CardContent>
       </Card>
 
-      {erro && <p className="text-sm text-destructive">{erro}</p>}
+      <Erro msg={erro} />
 
       <div className="flex gap-2">
         <Button

@@ -9,6 +9,7 @@ import {
   type UseFormRegister,
 } from "react-hook-form";
 import type { ContaFormValues } from "./conta-form-schema";
+import { Erro } from "@/components/ui/erro";
 import { centavosParaReais, gerarParcelas, reaisParaCentavos } from "@/modules/financeiro/domain/baixa";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -147,8 +148,11 @@ export function ParcelasEditor({
         </>
       )}
 
+      {/* Erro da lista inteira (ex.: soma das parcelas != total). Os erros por
+          linha aparecem em cada campo; aqui `.message` só é string no primeiro
+          caso. */}
       {typeof errors.parcelas?.message === "string" && (
-        <p className="text-sm text-destructive">{errors.parcelas.message}</p>
+        <Erro msg={errors.parcelas.message} />
       )}
       {fields.length === 0 && (
         <p className="text-sm text-muted-foreground">

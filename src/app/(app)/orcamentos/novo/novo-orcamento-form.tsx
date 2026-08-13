@@ -143,9 +143,7 @@ export function NovoOrcamentoForm({
                   />
                 )}
               />
-              {form.formState.errors.clienteId && (
-                <Erro msg={form.formState.errors.clienteId.message} />
-              )}
+              <Erro msg={form.formState.errors.clienteId?.message} />
             </div>
 
             <div className="grid gap-1.5">
@@ -179,9 +177,7 @@ export function NovoOrcamentoForm({
                   </Select>
                 )}
               />
-              {form.formState.errors.veiculoId && (
-                <Erro msg={form.formState.errors.veiculoId.message} />
-              )}
+              <Erro msg={form.formState.errors.veiculoId?.message} />
             </div>
           </div>
 
@@ -190,7 +186,7 @@ export function NovoOrcamentoForm({
               Queixa do cliente
             </Label>
             <Textarea id="queixa" rows={2} {...form.register("queixa")} />
-            {form.formState.errors.queixa && <Erro msg={form.formState.errors.queixa.message} />}
+            <Erro msg={form.formState.errors.queixa?.message} />
           </div>
 
           <div className="grid gap-1.5">
@@ -315,14 +311,12 @@ export function NovoOrcamentoForm({
               Válido até
             </Label>
             <Input id="validade" type="date" {...form.register("validade")} />
-            {form.formState.errors.validade && (
-              <Erro msg={form.formState.errors.validade.message} />
-            )}
+            <Erro msg={form.formState.errors.validade?.message} />
           </div>
         </CardContent>
       </Card>
 
-      {erro && <p className="text-sm text-destructive">{erro}</p>}
+      <Erro msg={erro} />
 
       <div>
         <Button

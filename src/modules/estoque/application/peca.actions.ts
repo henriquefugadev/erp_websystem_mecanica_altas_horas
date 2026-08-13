@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getSessaoAtual } from "@/lib/supabase/sessao";
 import {
   ajusteSchema,
   movimentacaoSchema,
@@ -21,13 +20,13 @@ import {
   registrarMovimentacao,
 } from "@/modules/estoque/data/movimentacao.repository";
 import { mensagemDeErro } from "@/modules/financeiro/application/erros";
-import type { ActionResult } from "@/lib/action-result";
+import { exigirSessao, type ActionResult } from "@/lib/action-result";
 
 export type { ActionResult };
 
 export async function criarPecaAction(entrada: unknown): Promise<ActionResult<{ id: string }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = pecaSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -36,7 +35,7 @@ export async function criarPecaAction(entrada: unknown): Promise<ActionResult<{ 
 
   const supabase = await createClient();
   try {
-    const peca = await criarPeca(supabase, sessao.workshopId, sessao.usuarioId, parsed.data);
+    const peca = await criarPeca(supabase, guard.sessao.workshopId, guard.sessao.usuarioId, parsed.data);
     revalidatePath("/estoque");
     return { ok: true, data: { id: peca.id } };
   } catch (e) {
@@ -48,8 +47,8 @@ export async function atualizarPecaAction(
   id: string,
   entrada: unknown
 ): Promise<ActionResult<{ id: string }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = pecaSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -68,8 +67,8 @@ export async function atualizarPecaAction(
 }
 
 export async function excluirPecaAction(id: string): Promise<ActionResult<null>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const supabase = await createClient();
   try {
@@ -84,8 +83,8 @@ export async function excluirPecaAction(id: string): Promise<ActionResult<null>>
 export async function registrarMovimentacaoAction(
   entrada: unknown
 ): Promise<ActionResult<{ id: string }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = movimentacaoSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -96,8 +95,8 @@ export async function registrarMovimentacaoAction(
   try {
     const movimentacao = await registrarMovimentacao(
       supabase,
-      sessao.workshopId,
-      sessao.usuarioId,
+      guard.sessao.workshopId,
+      guard.sessao.usuarioId,
       parsed.data
     );
     revalidatePath("/estoque");
@@ -112,8 +111,8 @@ export async function registrarMovimentacaoAction(
 }
 
 export async function ajustarEstoqueAction(entrada: unknown): Promise<ActionResult<{ id: string }>> {
-  const sessao = await getSessaoAtual();
-  if (!sessao) return { ok: false, erro: "Sessão expirada. Faça login novamente." };
+  const guard = await exigirSessao();
+  if (!guard.ok) return guard;
 
   const parsed = ajusteSchema.safeParse(entrada);
   if (!parsed.success) {
@@ -124,7 +123,7 @@ export async function ajustarEstoqueAction(entrada: unknown): Promise<ActionResu
   try {
     const id = await ajustarEstoque(
       supabase,
-      sessao.usuarioId,
+      guard.sessao.usuarioId,
       parsed.data.pecaId,
       parsed.data.quantidadeContada,
       parsed.data.observacao || null
