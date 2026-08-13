@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Copy, Download, MessageCircle, Percent, X } from "lucide-react";
 import type { OrcamentoComRelacoes } from "@/modules/orcamento/domain/types";
@@ -20,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { ResponderOrcamentoDialog } from "./responder-orcamento-dialog";
 
 export function OrcamentoAcoes({ orcamento }: { orcamento: OrcamentoComRelacoes }) {
-  const router = useRouter();
   const [processando, setProcessando] = useState(false);
   // Mesma regra que as actions aplicam no servidor (domain/status.ts) — aqui
   // ela só esconde botão; quem barra de verdade é o servidor.
@@ -35,7 +33,6 @@ export function OrcamentoAcoes({ orcamento }: { orcamento: OrcamentoComRelacoes 
       return;
     }
     toast.success("Marcado como enviado.");
-    router.refresh();
   }
 
   async function recusar() {
@@ -47,7 +44,6 @@ export function OrcamentoAcoes({ orcamento }: { orcamento: OrcamentoComRelacoes 
       return;
     }
     toast.success("Orçamento recusado.");
-    router.refresh();
   }
 
   async function cancelar() {
@@ -59,7 +55,6 @@ export function OrcamentoAcoes({ orcamento }: { orcamento: OrcamentoComRelacoes 
       return;
     }
     toast.success("Orçamento cancelado.");
-    router.refresh();
   }
 
   function copiarTexto() {
@@ -80,16 +75,13 @@ export function OrcamentoAcoes({ orcamento }: { orcamento: OrcamentoComRelacoes 
         ? `Markup reaplicado em ${resultado.data.atualizados} item(ns).`
         : "Nenhum item cotado para reaplicar."
     );
-    router.refresh();
   }
 
   // Enviar o orçamento (WhatsApp/PDF) já marca como enviado quando ainda é
   // rascunho — sem depender de a Michele lembrar de clicar em outro botão.
   function marcarEnviadoAoCompartilhar() {
     if (orcamento.status !== "rascunho") return;
-    void marcarOrcamentoEnviadoAction(orcamento.id).then((r) => {
-      if (r.ok) router.refresh();
-    });
+    void marcarOrcamentoEnviadoAction(orcamento.id);
   }
 
   const linkWhatsApp = orcamento.cliente?.telefone

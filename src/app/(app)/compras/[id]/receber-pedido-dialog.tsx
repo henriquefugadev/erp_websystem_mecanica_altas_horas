@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { receberPedidoAction } from "@/modules/fornecedores/application/pedido-compra.actions";
 import { hojeSaoPaulo, formatarDinheiro } from "@/lib/format";
@@ -33,7 +32,6 @@ export function ReceberPedidoDialog({
   pedidoId: string;
   itensPendentes: ItemPendente[];
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -98,7 +96,6 @@ export function ReceberPedidoDialog({
         );
       }
       setOpen(false);
-      router.refresh();
     } finally {
       setEnviando(false);
     }

@@ -1,14 +1,12 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cancelarContaAction } from "@/modules/financeiro/application/conta.actions";
 
 export function CancelarContaButton({ contaId }: { contaId: string }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   function cancelar() {
@@ -26,7 +24,6 @@ export function CancelarContaButton({ contaId }: { contaId: string }) {
         return;
       }
       toast.success("Conta cancelada.");
-      router.refresh();
     });
   }
 

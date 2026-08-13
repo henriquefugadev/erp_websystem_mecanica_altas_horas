@@ -73,7 +73,6 @@ export function ResponderOrcamentoDialog({ orcamento }: { orcamento: OrcamentoCo
       if (resultado.data.faltaPeca) {
         toast.info("Há peças aprovadas a comprar — gere os pedidos de compra.");
       }
-      router.refresh();
     } else {
       toast.success("Orçamento aprovado — OS aberta no Pátio.");
       router.push("/patio");
@@ -90,7 +89,6 @@ export function ResponderOrcamentoDialog({ orcamento }: { orcamento: OrcamentoCo
     }
     toast.success("Orçamento recusado.");
     setOpen(false);
-    router.refresh();
   }
 
   return (

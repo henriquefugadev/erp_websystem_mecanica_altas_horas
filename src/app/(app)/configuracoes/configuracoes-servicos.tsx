@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import type { ServicoCatalogo } from "@/modules/servicos/data/servico-catalogo.repository";
@@ -50,7 +49,6 @@ export function ConfiguracoesServicos({ servicos }: { servicos: ServicoCatalogo[
 }
 
 function LinhaServico({ servico }: { servico: ServicoCatalogo }) {
-  const router = useRouter();
   const [nome, setNome] = useState(servico.nome);
   const [preco, setPreco] = useState(String(servico.preco_padrao));
   const [ativo, setAtivo] = useState(servico.ativo);
@@ -76,7 +74,6 @@ function LinhaServico({ servico }: { servico: ServicoCatalogo }) {
       return;
     }
     toast.success("Serviço atualizado.");
-    router.refresh();
   }
 
   async function excluir() {
@@ -88,7 +85,6 @@ function LinhaServico({ servico }: { servico: ServicoCatalogo }) {
       return;
     }
     toast.success("Serviço excluído.");
-    router.refresh();
   }
 
   return (
@@ -144,7 +140,6 @@ function LinhaServico({ servico }: { servico: ServicoCatalogo }) {
 }
 
 function NovoServico() {
-  const router = useRouter();
   const [nome, setNome] = useState("");
   const [preco, setPreco] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -166,7 +161,6 @@ function NovoServico() {
     toast.success("Serviço adicionado.");
     setNome("");
     setPreco("");
-    router.refresh();
   }
 
   return (

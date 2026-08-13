@@ -1,7 +1,6 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,6 @@ export function EstornarPagamentoButton({
   pagamentoId: string;
   contaId: string;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   function estornar() {
@@ -27,7 +25,6 @@ export function EstornarPagamentoButton({
         return;
       }
       toast.success("Pagamento estornado.");
-      router.refresh();
     });
   }
 

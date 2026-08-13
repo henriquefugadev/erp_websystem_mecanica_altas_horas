@@ -35,7 +35,11 @@ export async function atualizarConfiguracaoAction(
   const supabase = await createClient();
   try {
     await atualizarConfiguracao(supabase, guard.sessao.workshopId, parsed.data);
-    revalidatePath("/configuracoes");
+    // "/" + "layout" e não "/configuracoes": o que se salva aqui aparece fora
+    // desta página. Nome da oficina e itens de menu escondidos vivem na sidebar
+    // (o layout), e os parâmetros do pátio mudam as baias do quadro. Revalidar
+    // só "/configuracoes" deixaria as outras rotas em cache com o menu antigo.
+    revalidatePath("/", "layout");
     return { ok: true, data: null };
   } catch {
     return { ok: false, erro: "Não foi possível salvar. Tente novamente." };

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -43,7 +42,6 @@ export function RegistrarPagamentoDialog({
   contaId: string;
   saldo: number;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -65,7 +63,6 @@ export function RegistrarPagamentoDialog({
       toast.success("Pagamento registrado.");
       setOpen(false);
       form.reset(pagamentoDefaultValues(saldo));
-      router.refresh();
     } finally {
       setEnviando(false);
     }

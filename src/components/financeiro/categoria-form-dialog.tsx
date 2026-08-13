@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -43,7 +42,6 @@ export function CategoriaFormDialog({
   categoria?: { id: string; tipo: "receita" | "despesa"; nome: string };
   tipoInicial?: "receita" | "despesa";
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -72,7 +70,6 @@ export function CategoriaFormDialog({
       toast.success(categoria ? "Categoria atualizada." : "Categoria cadastrada.");
       setOpen(false);
       form.reset(categoriaDefaultValues(tipoInicial));
-      router.refresh();
     } finally {
       setEnviando(false);
     }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import type { NaturezaItemOrcamento } from "@/lib/supabase/database.types";
@@ -52,7 +51,6 @@ export function ConfiguracoesTipos({ tipos }: { tipos: TipoItemOrcamento[] }) {
 }
 
 function LinhaTipo({ tipo }: { tipo: TipoItemOrcamento }) {
-  const router = useRouter();
   const [nome, setNome] = useState(tipo.nome);
   const [natureza, setNatureza] = useState<NaturezaItemOrcamento>(tipo.natureza);
   const [ativo, setAtivo] = useState(tipo.ativo);
@@ -71,7 +69,6 @@ function LinhaTipo({ tipo }: { tipo: TipoItemOrcamento }) {
       return;
     }
     toast.success("Tipo atualizado.");
-    router.refresh();
   }
 
   async function excluir() {
@@ -87,7 +84,6 @@ function LinhaTipo({ tipo }: { tipo: TipoItemOrcamento }) {
         ? "Tipo já usado em orçamentos — foi desativado (some da lista de escolha)."
         : "Tipo excluído."
     );
-    router.refresh();
   }
 
   return (
@@ -141,7 +137,6 @@ function LinhaTipo({ tipo }: { tipo: TipoItemOrcamento }) {
 }
 
 function NovoTipo() {
-  const router = useRouter();
   const [nome, setNome] = useState("");
   const [natureza, setNatureza] = useState<NaturezaItemOrcamento>("peca");
   const [salvando, setSalvando] = useState(false);
@@ -158,7 +153,6 @@ function NovoTipo() {
     toast.success("Tipo adicionado.");
     setNome("");
     setNatureza("peca");
-    router.refresh();
   }
 
   return (

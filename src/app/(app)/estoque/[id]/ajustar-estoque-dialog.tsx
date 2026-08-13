@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ajusteSchema } from "@/lib/validators/peca.schema";
 import { ajustarEstoqueAction } from "@/modules/estoque/application/peca.actions";
@@ -28,7 +27,6 @@ export function AjustarEstoqueDialog({
   estoqueAtual: number;
   unidade: string;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -61,7 +59,6 @@ export function AjustarEstoqueDialog({
       }
       toast.success("Estoque ajustado.");
       setOpen(false);
-      router.refresh();
     } finally {
       setEnviando(false);
     }

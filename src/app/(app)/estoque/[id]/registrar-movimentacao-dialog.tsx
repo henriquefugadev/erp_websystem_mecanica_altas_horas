@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { movimentacaoSchema } from "@/lib/validators/peca.schema";
 import { registrarMovimentacaoAction } from "@/modules/estoque/application/peca.actions";
@@ -36,7 +35,6 @@ export function RegistrarMovimentacaoDialog({
   tipo: TipoManual;
   unidade: string;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -78,7 +76,6 @@ export function RegistrarMovimentacaoDialog({
       }
       toast.success("Movimentação registrada.");
       setOpen(false);
-      router.refresh();
     } finally {
       setEnviando(false);
     }

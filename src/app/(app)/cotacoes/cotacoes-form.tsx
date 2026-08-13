@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { MessageCircle } from "lucide-react";
 import type { ItemCotacao } from "@/modules/orcamento/data/cotacao.repository";
@@ -57,7 +56,6 @@ export function CotacoesForm({
   fornecedores: FornecedorOpcao[];
   markup: number;
 }) {
-  const router = useRouter();
   const [filtro, setFiltro] = useState<Filtro>("sem_preco");
   const [enviando, setEnviando] = useState(false);
   const [valores, setValores] = useState<Record<string, Valor>>(() =>
@@ -152,7 +150,6 @@ export function CotacoesForm({
       }
       toast.success(`${alterados.length} cotação(ões) salva(s).`);
       inicial.current = { ...valores };
-      router.refresh();
     } finally {
       setEnviando(false);
     }

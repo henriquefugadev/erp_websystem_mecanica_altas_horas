@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -39,7 +38,6 @@ import {
 import { Erro } from "@/components/ui/erro";
 
 export function FuncionarioFormDialog({ funcionario }: { funcionario?: Funcionario }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -75,7 +73,6 @@ export function FuncionarioFormDialog({ funcionario }: { funcionario?: Funcionar
       toast.success(funcionario ? "Funcionário atualizado." : "Funcionário cadastrado.");
       setOpen(false);
       form.reset(funcionarioDefaultValues());
-      router.refresh();
     } finally {
       setEnviando(false);
     }

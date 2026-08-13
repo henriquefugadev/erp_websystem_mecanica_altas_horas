@@ -1,14 +1,12 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { excluirCategoriaAction } from "@/modules/financeiro/application/categoria.actions";
 
 export function ExcluirCategoriaButton({ categoriaId }: { categoriaId: string }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   function excluir() {
@@ -22,7 +20,6 @@ export function ExcluirCategoriaButton({ categoriaId }: { categoriaId: string })
         return;
       }
       toast.success("Categoria excluída.");
-      router.refresh();
     });
   }
 

@@ -1,14 +1,12 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { excluirFuncionarioAction } from "@/modules/funcionarios/application/funcionario.actions";
 
 export function ExcluirFuncionarioButton({ funcionarioId }: { funcionarioId: string }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   function excluir() {
@@ -21,7 +19,6 @@ export function ExcluirFuncionarioButton({ funcionarioId }: { funcionarioId: str
         return;
       }
       toast.success("Funcionário excluído.");
-      router.refresh();
     });
   }
 

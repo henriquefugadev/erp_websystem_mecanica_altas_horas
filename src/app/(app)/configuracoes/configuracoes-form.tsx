@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -99,7 +98,6 @@ export function ConfiguracoesForm({
   parametros: ParametrosPatio;
   categoriasReceita: { id: string; nome: string }[];
 }) {
-  const router = useRouter();
   const [erro, setErro] = useState<string | null>(null);
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [enviandoLogo, setEnviandoLogo] = useState(false);
@@ -135,7 +133,6 @@ export function ConfiguracoesForm({
       return;
     }
     toast.success("Configurações salvas.");
-    router.refresh();
   }
 
   async function preencherPorCep() {
@@ -171,7 +168,6 @@ export function ConfiguracoesForm({
       return;
     }
     toast.success("Logo atualizado.");
-    router.refresh();
   }
 
   async function handleRemoverLogo() {
@@ -182,7 +178,6 @@ export function ConfiguracoesForm({
       return;
     }
     toast.success("Logo removido.");
-    router.refresh();
   }
 
   return (

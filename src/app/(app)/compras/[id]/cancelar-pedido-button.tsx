@@ -1,13 +1,11 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cancelarPedidoAction } from "@/modules/fornecedores/application/pedido-compra.actions";
 
 export function CancelarPedidoButton({ pedidoId }: { pedidoId: string }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   function cancelar() {
@@ -21,7 +19,6 @@ export function CancelarPedidoButton({ pedidoId }: { pedidoId: string }) {
         return;
       }
       toast.success("Pedido cancelado.");
-      router.refresh();
     });
   }
 
