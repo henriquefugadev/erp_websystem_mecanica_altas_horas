@@ -272,6 +272,9 @@ Abra a URL da Vercel e faça este roteiro, na ordem. Marque cada um:
 - [ ] **Galpões** — as bolinhas de lotação aparecem acima do quadro
 - [ ] **Entrada de veículo** — busca cliente por placa e registra
 - [ ] **Configurações** — abre e mostra os cards de galpões, prazos e serviços
+- [ ] **Menu lateral** — nas Configurações, esconda um item do menu e salve. Ele
+      some da barra da esquerda **na hora**. Navegue para outra tela e confira
+      que continua escondido lá também. Depois desmarque e salve de novo
 - [ ] **Créditos** — no fim das Configurações aparece "Desenvolvido por"
 - [ ] **Financeiro** — o gráfico de fluxo de caixa desenha
 - [ ] **PDF do orçamento** — abre um orçamento e clica em gerar PDF
@@ -279,8 +282,11 @@ Abra a URL da Vercel e faça este roteiro, na ordem. Marque cada um:
       nova senha** (não a de erro)
 - [ ] **Celular** — abra a URL no seu telefone e confira o Pátio e a Entrada
 
-O terceiro item é o mais importante: é o único que não dá pra verificar sem estar
-logado no navegador.
+Os itens **Ação no quadro** e **Menu lateral** são os que mais interessam: são os
+dois que dependem de a tela se atualizar sozinha depois de salvar, e os únicos que
+não dá pra verificar sem estar logado. O mecanismo por trás deles foi medido em
+rota de teste (a árvore nova chega em ~115 ms sem recarregar a página); o que
+falta é confirmar nas telas de verdade.
 
 ---
 
@@ -311,24 +317,30 @@ Redeploy). A Vercel não reconstrói sozinha por mudança de env.
 A Redirect URL não está cadastrada, ou está sem o `/**`. Volte ao passo 3.
 Depois de alterar, peça um link **novo** — o antigo continua inválido.
 
-### O quadro do Pátio não atualiza sozinho ao clicar
+### Uma tela não atualiza sozinha depois de salvar
 
-Sintoma: você clica em "Iniciar", aparece o aviso verde, mas o card só muda de
-lugar depois do F5.
+Sintoma: você salva, aparece o aviso verde, mas a lista/o card só muda depois
+do F5.
 
-Causa: o `router.refresh()` foi removido do
-`src/app/(app)/patio/kanban-board.tsx` porque o `revalidatePath("/patio")` do
-servidor já devolve a tela atualizada. Se na prática não estiver acontecendo, o
-conserto é devolver o refresh dentro da função `executar`:
+Causa: o `router.refresh()` foi removido de todas as telas, porque o
+`revalidatePath` da própria action já devolve a tela atualizada junto com a
+resposta — o refresh era um segundo carregamento em cima. Isso foi medido no
+navegador (115 ms para a árvore nova chegar, com um controle sem
+`revalidatePath` que de fato não atualiza nada), então não deve acontecer.
+
+Se acontecer numa tela específica, o conserto é de uma linha, na **action**,
+não no componente: conferir se ela revalida a rota onde a tela mora. Exemplo
+em `src/modules/estoque/application/peca.actions.ts`:
 
 ```ts
-async function executar<T>(acao, aoDarCerto) {
-  const resultado = await acao;
-  if (!resultado.ok) { toast.error(resultado.erro); return; }
-  toast.success(...);
-  router.refresh();   // <- devolver esta linha
-}
+revalidatePath("/estoque");
+revalidatePath(`/estoque/${parsed.data.pecaId}`);  // a rota aberta
 ```
+
+Se o que mudou aparece na **sidebar** (nome da oficina, itens de menu
+escondidos), a action precisa de `revalidatePath("/", "layout")` — é o que
+`atualizarConfiguracaoAction` usa, para as outras rotas não ficarem em cache
+com o menu antigo.
 
 ### Precisa criar um login novo para alguém
 
