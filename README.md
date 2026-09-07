@@ -24,12 +24,14 @@ Desenvolvido para o desafio **GO! JOVEM 2026** (SEBRAE-GO, Edital nº 01/2026) e
 
 | Dashboard Financeiro | Pátio (Kanban) |
 |---|---|
-|  | <img width="1914" height="910" alt="image" src="https://github.com/user-attachments/assets/7eeedeff-fcd1-4eb3-8d80-365df62b8d52" />
+| <img width="1916" height="905" alt="image" src="https://github.com/user-attachments/assets/9de16a13-510c-4a38-81ec-114b622dfc4a" />
+ | <img width="1914" height="910" alt="image" src="https://github.com/user-attachments/assets/7eeedeff-fcd1-4eb3-8d80-365df62b8d52" />
  |
 
 | Cadastro de Clientes | Contas |
 |---|---|
-| | ![Orçamento](docs/screenshots/orcamento.png) | <img width="1917" height="905" alt="image" src="https://github.com/user-attachments/assets/e96cb262-5a85-427d-859e-859aa21ed4e3" />
+| <img width="983" height="901" alt="image" src="https://github.com/user-attachments/assets/cb61158c-3429-4a15-a789-46cfe68cbbd7" />
+| <img width="1917" height="905" alt="image" src="https://github.com/user-attachments/assets/e96cb262-5a85-427d-859e-859aa21ed4e3" />
 
 
 | Funcionários  |
